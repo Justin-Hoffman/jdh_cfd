@@ -182,7 +182,7 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 		printf("\t Solving Viscous Bergers \n");
 #endif
-		slv_vbeftcs(u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,Re,dt);
+		slv_vbe(u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,Re,dt);
 
 		/* Calculate phi */	
 #ifdef DEBUG
@@ -193,8 +193,9 @@ int main(int argc, char** argv)
 		/* Apply Projection */
 #ifdef DEBUG
 		printf("\t Applying Projection \n");
-		apply_projection(phi,u,us,v,vs,dx,dy,nx,ny,dt);
 #endif
+		apply_projection(phi,u,us,v,vs,dx,dy,nx,ny,dt);
+
 		/* Repeat */
 		if (t==nt-1){
 			get_uv(u,v,usv,vsv,nx,ny);
