@@ -15,4 +15,5 @@ slv.o:
 	$(CC) -c ./src/slv.c $(CFLAGS) $(DEBUG) -o ./src/slv.o
 	
 clean:
-	rm -rf ./src/*o jdh_solv
+	rm -rf ./src/*o jdh_solv ./*.dat
+	
