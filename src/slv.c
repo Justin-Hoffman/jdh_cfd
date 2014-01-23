@@ -159,11 +159,11 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 	printf("\t\t MEMORY ALLOCATION DONE \n\n");
 #endif
-	double min = 0.01;
+	double min = 0.00001;
 	/* Time Iteration Loop */
 	for(int t = 0;t<nt;t++){
 		if(t > nt*9.0/10.0){
-			min = 0.0001;
+			min = 0.00001;
 		}
 		if(t%1000==0){
 			printf("\t %i / %i \n",t,nt);
@@ -557,8 +557,6 @@ void slv_vbeftcs(double** restrict u, double** restrict us, double** restrict du
 			}
 		}
 	}
-
-		
 	#pragma omp parallel for
 	for(int i=1;i<nx;i++){
 		for(int j = 1; j<nx;j++){
@@ -636,7 +634,7 @@ void slv_pssn(double** restrict phi,double** restrict phinext, double** restrict
 		resid = 0.0;
 		for(int i=0; i<nx; i++){
 			for(int j=0;j<ny;j++){
-				save = fabs(phi[i][j]-phinext[i][j]);
+				save = fabs(phi[i][j]-phinext[i][j]); //Infinity Norm
 				if (save>resid){
 					resid = save;
 				} 	
@@ -648,6 +646,12 @@ void slv_pssn(double** restrict phi,double** restrict phinext, double** restrict
 #endif
 }
 
+/* Poisson Solver */
+void slv_pssn_gmres(double** restrict phi,double** restrict phinext, double** restrict us, double** restrict vs, double dx, double dy, int nx, int ny,double dt,double min)
+{
+
+
+}
 void apply_projection(double** restrict phi, double** restrict u, double** restrict us, double** restrict v, double** restrict vs, double dx, double dy, int nx, int ny, double dt)
 {
 	#pragma omp parallel for
