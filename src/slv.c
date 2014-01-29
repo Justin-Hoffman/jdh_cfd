@@ -28,15 +28,16 @@ int main(int argc, char** argv)
 	int nx = 40;
 	int ny = 40;	
 	int nt = 1000;
+	int memcntr = 0;
 	double Re = 100.0;
 	double dt = 0.001;
 	struct slv_settings st;
 	st = init_settings();
 	st.YBC = WALL;
-	st.XUV = 1.0;
-	st.XLV = -1.0;
 	st.XBC = PERIODIC;
-	st.XConst = 0.0;
+	st.XUV = 0.0;
+	st.XLV = 0.0;
+	st.XConst = 8.0l/Re;
 	st.YConst = 0.0;
 	
 	/* Parse Input Arguments */
@@ -73,68 +74,68 @@ int main(int argc, char** argv)
 	printf("\tReynolds Number: %f\n",Re);
 	printf("\tTime Step: %f\n",dt);
 	printf("\tTime Iterations: %i\n",nt);
-	printf("\n\tEstimated Memory Usage: (words)\n");
+
 
 	/*Allocate Memory for Spacial Variables */
 #ifdef DEBUG
 	printf("\t Begin Memory Allocation \n");
 #endif
-	double** omega = malloc(nx*sizeof(double*));
 
-	double** phi = malloc((nx+1)*sizeof(double*));
-	double** phinext = malloc((nx+1)*sizeof(double*));	
-	double** strm = malloc((nx+3)*sizeof(double*));
-	double** strmnext = malloc((nx+3)*sizeof(double*));
+	double** omega = malloc(nx*sizeof(double*));memcntr += nx*sizeof(double*);
+
+	double** phi = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** phinext = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** strm = malloc((nx+3)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** strmnext = malloc((nx+3)*sizeof(double*));memcntr += (nx+3)*sizeof(double*);
 	
-	double** u = malloc(nx*sizeof(double*));
-	double** us = malloc(nx*sizeof(double*));
-	double** dus = malloc(nx*sizeof(double*));
-	double** duss = malloc(nx*sizeof(double*));
+	double** u = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** us = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** dus = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** duss = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
 
-	double** v = malloc((nx+1)*sizeof(double*));
-	double** vs = malloc((nx+1)*sizeof(double*));
-	double** dvs = malloc((nx+1)*sizeof(double*));
-	double** dvss = malloc((nx+1)*sizeof(double*));
+	double** v = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** vs = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** dvs = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** dvss = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
 		
-	double** usv = malloc(nx*sizeof(double*));
-	double** vsv = malloc(nx*sizeof(double*));
+	double** usv = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** vsv = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
 
-	double** hu = malloc(nx*sizeof(double*));
-	double** huold = malloc(nx*sizeof(double*));
+	double** hu = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** huold = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
 
-	double** hv = malloc((nx+1)*sizeof(double*));
-	double** hvold = malloc((nx+1)*sizeof(double*));
+	double** hv = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** hvold = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
 	
 	for(int i = 0; i<nx+2; i++){
 		if(i != (nx) && i != (nx+1)){
-			u[i] = malloc((ny+1)*sizeof(double));	
-			us[i] = malloc((ny+1)*sizeof(double));		
-			dus[i] = malloc((ny+1)*sizeof(double));		
-			duss[i] = malloc((ny+1)*sizeof(double));
+			u[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+			us[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+			dus[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+			duss[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
 					
-			hu[i] = malloc((ny+1)*sizeof(double));
-			huold[i] = malloc((ny+1)*sizeof(double));
+			hu[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+			huold[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
 
-			usv[i] = malloc(ny*sizeof(double));
-			vsv[i] = malloc(ny*sizeof(double));
-			omega[i] = malloc(nx*sizeof(double));
+			usv[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			vsv[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			omega[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
 		}
 		if(i!=(nx+1)){
-			phi[i] = malloc((ny+1)*sizeof(double));
-			phinext[i] = malloc((ny+1)*sizeof(double));
+			phi[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+			phinext[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
 	
-			v[i] = malloc(ny*sizeof(double));		
-			vs[i] = malloc(ny*sizeof(double));		
-			dvs[i] = malloc(ny*sizeof(double));		
-			dvss[i] = malloc(ny*sizeof(double));
+			v[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			vs[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			dvs[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			dvss[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
 	
-			hv[i] = malloc(ny*sizeof(double));
-			hvold[i] = malloc(ny*sizeof(double));
+			hv[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			hvold[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
 		}
 		
-		strm[i] = malloc((ny+2)*sizeof(double));
-		strmnext[i] = malloc((ny+2)*sizeof(double));
-
+		strm[i] = malloc((ny+2)*sizeof(double));memcntr += (ny+2)*sizeof(double);
+		strmnext[i] = malloc((ny+2)*sizeof(double));memcntr += (ny+2)*sizeof(double);
 		
 		for(int j=0;j<ny+2;j++){
 			if (i != nx && i != (nx+1)){
@@ -168,8 +169,10 @@ int main(int argc, char** argv)
 			strmnext[i][j] = 0.0;
 		}
 	}
+	printf("\n\tEstimated Memory Usage: %i (words)\n", memcntr);
 #ifdef DEBUG
 	printf("\t\t MEMORY ALLOCATION DONE \n\n");
+
 #endif
 	double min = 0.00001;
 	/* Time Iteration Loop */
