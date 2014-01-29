@@ -906,7 +906,11 @@ void mgmres_st ( int n, int nz_num, int ia[], int ja[], double a[],
   double rho_tol;
   double *s;
   double **v;
+#ifdef DEBUG
   int verbose = 1;
+#else
+  int verbose = 0;
+#endif
   double *y;
 
   if ( n < mr )
