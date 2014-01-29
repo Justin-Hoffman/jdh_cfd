@@ -2,10 +2,6 @@
 %     [nxo nyo] = size(phi);
 %     [nxv nyv] = size(omega);
     ho = [];
-    figure(1)
-    close
-    figure(2)
-    close
     [xx yy] = meshgrid(linspace(0,1,nx),linspace(0,1,ny));
     figure(1)
 %     for j=1:2:nyo
@@ -39,7 +35,6 @@
 %        clear v
 %     end
     contour(xx,yy,-omega',omegalevels)
-        
     axis equal
     axis([0 1 0 1])
     xlabel('x');

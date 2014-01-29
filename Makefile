@@ -2,9 +2,10 @@
 CC = icc 
 CPP = icpc
 # Compile-time flags 
-CFLAGS = -std=c99 -llapack -lblas -lm -lstdc -O3 -fopenmp
+CFLAGS = -std=c99 -llapack -lblas -lm -lstdc -O3 -fopenmp -debug
 CPPFLAGS =  -llapack -lblas -lm -fopenmp
 DEBUG = 
+#DEBUG = -DDEBUG -DDBGMGM -DDBGMGM
 
 all: jdh_solv
 
