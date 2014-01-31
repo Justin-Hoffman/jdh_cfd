@@ -34,7 +34,7 @@ double dist_from_circ(double x, double y, double xc, double yc, double R){
 double dist_from_line(double x, double y, double x0, double y0, double x1, double y1){
 	double t0 = vec_angle((x1-x0),(y1-y0), (x-x0),(y-y0)); // Angle with x0 as vertex
 	double t1 = vec_angle((x0-x1),(y0-y1), (x-x1),(y-y1)); // Angle with x1 as vertex
-	if ( t0 <= M_PI/2.0l && t0 <= M_PI/2.0l){
+	if ( t0 >= 0.0 && t1 >= 0.0){
 		return dist_from_vec((x-x0),(y-x0),(x1-x0),(y1-y0));
 	} else {
 		return fmin(dist_from_pt(x,y,x0,y0),dist_from_pt(x,y,x1,y1));
@@ -114,6 +114,8 @@ double dist_from_notch(double x, double y, double x0, double y0, double x1, doub
 	printf("X%i = %f, Y%i = %f\n",3,x3,3,y3);
 
 	printf("Angles: %f\t %f\t %f\t %f\t\n",angle0, angle1, angle2, angle3);
+	printf("Distances: %f\t %f\t %f\t %f\t\n",d0, d1, d2, d3);
+	printf("Dist from line check: %f \n\n",dist_from_line(1,1,1,0,2,0));
 
 
 	if (angle0 >= 0.0 && angle1 >= 0.0 && angle2 >= 0.0 && angle3 >= 0.0){ // If all cross product angles are greater than 0.0 then point HAS TO BE IN BOX
