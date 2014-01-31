@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "slv.h"
 #include "mgmres.h"
+#include "lvlset.h"
 
 
 /* Tri-Diagonal Solver */
@@ -34,10 +35,10 @@ int main(int argc, char** argv)
 	struct slv_settings st;
 	st = init_settings();
 	st.YBC = WALL;
-	st.XBC = PERIODIC;
+	st.XBC = WALL;
 	st.XUV = 0.0;
 	st.XLV = 0.0;
-	st.XConst = 8.0l/Re;
+	st.XConst = 0.0;
 	st.YConst = 0.0;
 	
 	/* Parse Input Arguments */
@@ -81,6 +82,8 @@ int main(int argc, char** argv)
 	printf("\t Begin Memory Allocation \n");
 #endif
 
+	int nghost = 3;
+	double** G = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** omega = malloc(nx*sizeof(double*));memcntr += nx*sizeof(double*);
 
 	double** phi = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
@@ -107,6 +110,11 @@ int main(int argc, char** argv)
 	double** hv = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
 	double** hvold = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
 	
+	//Allocate Levelset Array
+	for(int i = -nghost; i<nx+nghost-1; i++){
+		G[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+	}
+
 	for(int i = 0; i<nx+2; i++){
 		if(i != (nx) && i != (nx+1)){
 			u[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
@@ -174,6 +182,11 @@ int main(int argc, char** argv)
 	printf("\t\t MEMORY ALLOCATION DONE \n\n");
 
 #endif
+
+	printf("\n\t Initializing Zalesak's Disk into G \n");
+	init_zalesak(G, nx, ny, nghost, dx, dy);
+	printf("\n\t Done Initializing!\n\n");
+
 	double min = 0.00001;
 	/* Time Iteration Loop */
 	for(int t = 0;t<nt;t++){
@@ -228,6 +241,7 @@ int main(int argc, char** argv)
 			write_matrix_2d(omega, nx, ny, "omega.dat");
 			write_matrix_2d(phi,nx+1,ny+1,"phi.dat");
 			write_matrix_2d(strm,nx+2,ny+2,"stream.dat");
+			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1,"G.dat");
 		}
 	} 
 	

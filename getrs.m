@@ -1,11 +1,12 @@
 function getrs(nx,ny,nprefix)
+    nghost = 3;
     set(0,'DefaultAxesLineStyleOrder',{'-','-.','-.', ':', '-*', '-^', '-v', '-<', '->'})
     set(0,'DefaultAxesColorOrder',[0,0,0])
 
     load('./ghia/Re100-two.mat');
-    [xx yy] = meshgrid(linspace(0,1,nx),linspace(0,1,ny));
-    [xx1 yy1] = meshgrid(linspace(0,1,nx+1),linspace(0,1,ny+1));
-    [xx2 yy2] = meshgrid(linspace(0,1,nx+2),linspace(0,1,ny+2));
+    [xx, yy] = meshgrid(linspace(0,1,nx),linspace(0,1,ny));
+    [xx1, yy1] = meshgrid(linspace(0,1,nx+1),linspace(0,1,ny+1));
+    [xx2, yy2] = meshgrid(linspace(0,1,nx+2),linspace(0,1,ny+2));
     u = frdr('u.dat',nx,ny);
     uraw = frdr('uraw.dat',nx,ny+1);
     us = frdr('us.dat',nx,ny+1);
@@ -15,6 +16,7 @@ function getrs(nx,ny,nprefix)
     omega = frdr('omega.dat',nx,ny);
     phi = frdr('phi.dat',nx+1,ny+1);
     strm = frdr('stream.dat',nx+2,ny+2);
+    G = frdr('G.dat',nx+2*nghost-1, ny+2*nghost-1);
     
     %% Fig 1
     [xx, yy] = meshgrid(linspace(0,1,nx),linspace(0,1,ny));
@@ -71,6 +73,15 @@ function getrs(nx,ny,nprefix)
     set(gcf, 'PaperPositionMode', 'manual');
     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 4 4])
     print( gcf, '-dpng', [nprefix 'VVel'])
-    ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW1/
+    
+    
+    figure(6)
+    subplot 211
+    [c,h] = contour(xx,yy,G(nghost:end-nghost,nghost:end-nghost)',[-.2:.02:0]);
+    clabel(c,h)
+    grid on
+    subplot 212
+    surf(xx,yy,G(nghost:end-nghost,nghost:end-nghost)');
+%     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW1/
 
 
