@@ -1,5 +1,7 @@
 function getrs(nx,ny,nprefix)
     nghost = 3;
+    dx = 1/(nx-1);
+    dy = 1/(ny-1);
     set(0,'DefaultAxesLineStyleOrder',{'-','-.','-.', ':', '-*', '-^', '-v', '-<', '->'})
     set(0,'DefaultAxesColorOrder',[0,0,0])
 
@@ -7,6 +9,8 @@ function getrs(nx,ny,nprefix)
     [xx, yy] = meshgrid(linspace(0,1,nx),linspace(0,1,ny));
     [xx1, yy1] = meshgrid(linspace(0,1,nx+1),linspace(0,1,ny+1));
     [xx2, yy2] = meshgrid(linspace(0,1,nx+2),linspace(0,1,ny+2));
+    [xxg, yyg] = meshgrid(linspace(dx/2-(nghost*dx),1-dx/2+(nghost*dx),nx+2*nghost-1),...
+        linspace(dy/2-(nghost*dy),1-dy/2+(nghost*dy),ny+2*nghost-1));
     u = frdr('u.dat',nx,ny);
     uraw = frdr('uraw.dat',nx,ny+1);
     us = frdr('us.dat',nx,ny+1);
@@ -76,12 +80,14 @@ function getrs(nx,ny,nprefix)
     
     
     figure(6)
-    subplot 211
-    [c,h] = contour(xx,yy,G(nghost:end-nghost,nghost:end-nghost)',[-.2:.02:0]);
+    [c,h] = contour(xxg,yyg,G',[-.1:.01:0.04]);
     clabel(c,h)
+    axis equal
     grid on
-    subplot 212
-    surf(xx,yy,G(nghost:end-nghost,nghost:end-nghost)');
+    
+    figure(7)
+    surf(xxg,yyg,G')
+    
 %     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW1/
 
 
