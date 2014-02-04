@@ -95,25 +95,28 @@ int main(int argc, char** argv)
 	double** strm = malloc((nx+3)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
 	double** strmnext = malloc((nx+3)*sizeof(double*));memcntr += (nx+3)*sizeof(double*);
 	
-	double** u = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
-	double** us = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
-	double** dus = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
-	double** duss = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** u = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
+	double** us = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
+	double** dus = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
+	double** duss = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
 
-	double** v = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
-	double** vs = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
-	double** dvs = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
-	double** dvss = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** v = malloc((nx+1+2*nghost)*sizeof(double*));memcntr += (nx+1+2*nghost)*sizeof(double*);
+	double** vs = malloc((nx+1+2*nghost)*sizeof(double*));memcntr += (nx+1+2*nghost)*sizeof(double*);
+	double** dvs = malloc((nx+1+2*nghost)*sizeof(double*));memcntr += (nx+1+2*nghost)*sizeof(double*);
+	double** dvss = malloc((nx+1+2*nghost)*sizeof(double*));memcntr += (nx+1+2*nghost)*sizeof(double*);
 		
-	double** usv = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
-	double** vsv = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** usv = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
+	double** vsv = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
 
-	double** hu = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
-	double** huold = malloc(nx*sizeof(double*));memcntr += (nx)*sizeof(double*);
+	double** hu = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
+	double** huold = malloc((nx+2*nghost)*sizeof(double*));memcntr += (nx+2*nghost)*sizeof(double*);
 
-	double** hv = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
-	double** hvold = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double** hv = malloc((nx+1+2*nghost)*sizeof(double*));memcntr += (nx+1+2*nghost)*sizeof(double*);
+	double** hvold = malloc((nx+1+2*nghost)*sizeof(double*));memcntr += (nx+1+2*nghost)*sizeof(double*);
 	
+#ifdef DBGMEM
+	printf("\t Malloc Levelset Arrays\n");
+#endif
 	//Allocate Levelset Array
 	for(int i = -nghost; i<nx+nghost-1; i++){
 		G[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
@@ -122,67 +125,72 @@ int main(int argc, char** argv)
 		dGdyp[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdym[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 	}
+#ifdef DBGMEM
+	printf("\t Malloc Normal Arrays\n");
+#endif
+	for(int i = -nghost; i<nx+nghost+1; i++){
 
-	for(int i = 0; i<nx+2; i++){
-		if(i != (nx) && i != (nx+1)){
-			u[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
-			us[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
-			dus[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
-			duss[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+		if(i < (nx+nghost+1)){
+			u[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
+			us[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
+			dus[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
+			duss[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
 					
-			hu[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
-			huold[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+			hu[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
+			huold[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
 
-			usv[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
-			vsv[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
-			omega[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			usv[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
+			vsv[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
+			omega[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
 		}
-		if(i!=(nx+1)){
-			phi[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
-			phinext[i] = malloc((ny+1)*sizeof(double));memcntr += (ny+1)*sizeof(double);
+		if(i < (nx+nghost+2)){
+			phi[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
+			phinext[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
 	
-			v[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
-			vs[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
-			dvs[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
-			dvss[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			v[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
+			vs[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
+			dvs[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
+			dvss[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
 	
-			hv[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
-			hvold[i] = malloc(ny*sizeof(double));memcntr += (ny)*sizeof(double);
+			hv[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
+			hvold[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
 		}
 		
-		strm[i] = malloc((ny+2)*sizeof(double));memcntr += (ny+2)*sizeof(double);
-		strmnext[i] = malloc((ny+2)*sizeof(double));memcntr += (ny+2)*sizeof(double);
+		strm[i+nghost] = malloc((ny+2+2*nghost)*sizeof(double));memcntr += (ny+2+2*nghost)*sizeof(double);
+		strmnext[i+nghost] = malloc((ny+2+2*nghost)*sizeof(double));memcntr += (ny+2+2*nghost)*sizeof(double);
 		
-		for(int j=0;j<ny+2;j++){
-			if (i != nx && i != (nx+1)){
-				u[i][j] = 0.0;
-				us[i][j] = 0.0;
-				dus[i][j] = 0.0;
-				duss[i][j] = 0.0;
-				hu[i][j] = 0.0;
-				huold[i][j] = 0.0;
+		for(int j=-nghost;j<ny+nghost+1;j++){
+			printf("\t (%i, %i) \n",i,j);
+			if (i < nx+1){
+				u[i+nghost][j+nghost] = 0.0;
+				us[i+nghost][j+nghost] = 0.0;
+				dus[i+nghost][j+nghost] = 0.0;
+				duss[i+nghost][j+nghost] = 0.0;
+				hu[i+nghost][j+nghost] = 0.0;
+				huold[i+nghost][j+nghost] = 0.0;
 				if(j != ny && j != (ny+1)){
-					usv[i][j]=0.0;
-					vsv[i][j]=0.0;
-					omega[i][j] = 0.0;
+					usv[i+nghost][j+nghost]=0.0;
+					vsv[i+nghost][j+nghost]=0.0;
+					omega[i+nghost][j+nghost] = 0.0;
 				}
 			}
-			if (j !=ny && j != (ny+1) && i != (nx+1)){
-				v[i][j] = 0.0;
-				vs[i][j] = 0.0;
-				dvs[i][j] = 0.0;
-				dvss[i][j] = 0.0;
-				hv[i][j] = 0.0;
-				hvold[i][j] = 0.0;
+			if (j < (ny+1) && i < (nx+1)){
+				v[i+nghost][j+nghost] = 0.0;
+				vs[i+nghost][j+nghost] = 0.0;
+				dvs[i+nghost][j+nghost] = 0.0;
+				dvss[i+nghost][j+nghost] = 0.0;
+				hv[i+nghost][j+nghost] = 0.0;
+				hvold[i+nghost][j+nghost] = 0.0;
 			}
-			if (i != (nx+1)){
-				if(j !=(ny+1)){
-					phi[i][j] = 0.0;
-					phinext[i][j] = 0.0;
+
+			if (i < (nx+1)){
+				if(j <(ny+1)){
+					phi[i+nghost][j+nghost] = 0.0;
+					phinext[i+nghost][j+nghost] = 0.0;
 				}
 			}
-			strm[i][j] = 0.0;
-			strmnext[i][j] = 0.0;
+			strm[i+nghost][j+nghost] = 0.0;
+			strmnext[i+nghost][j+nghost] = 0.0;
 		}
 	}
 	printf("\n\tEstimated Memory Usage: %i (words)\n", memcntr);
@@ -190,7 +198,6 @@ int main(int argc, char** argv)
 	printf("\t\t MEMORY ALLOCATION DONE \n\n");
 
 #endif
-
 	printf("\n\t Initializing Zalesak's Disk into G \n");
 	init_zalesak(G, nx, ny, nghost, dx, dy);
 	printf("\n\t Done Initializing!\n\n");
@@ -201,6 +208,7 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 	printf("\n\t Neumann BC done!\n\n");
 #endif DEBUG
+	void init_uv_test(u, v, nx, ny, nghost, dx, dy);
 
 	double min = 0.00001;
 	/* Time Iteration Loop */
@@ -219,25 +227,26 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 		printf("\t Setting BCS \n");
 #endif
-		set_bcs(u, v, dx, dy, nx, ny, Re, st);
+		//set_bcs(u, v, dx, dy, nx, ny, Re, st);
 
 		/* Solv Viscous Bergers Equation */
 #ifdef DEBUG
 		printf("\t Solving Viscous Bergers \n");
 #endif
-		slv_vbe(u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,Re,dt,st);
+		//slv_vbe(u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,Re,dt,st);
 
 		/* Calculate phi */	
 #ifdef DEBUG
 		printf("\t Solving Poisson Equation \n");
 #endif
-		slv_pssn(phi,phinext,us,vs,dx,dy,nx,ny,dt,min);
+		//slv_pssn(phi,phinext,us,vs,dx,dy,nx,ny,dt,min);
 		//slv_pssn_gmres(phi,phinext,us,vs,dx,dy,nx,ny,dt,min,st);
+
 		/* Apply Projection */
 #ifdef DEBUG
 		printf("\t Applying Projection \n");
 #endif
-		apply_projection(phi,u,us,v,vs,dx,dy,nx,ny,dt);
+		//apply_projection(phi,u,us,v,vs,dx,dy,nx,ny,dt);
 
 		/* Repeat */
 		if (t==nt-1){
