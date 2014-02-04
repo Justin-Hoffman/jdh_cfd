@@ -34,5 +34,7 @@
 
 	void init_zalesak(double** G, int nx, int ny, int nghost, double dx, double dy);
 
+	void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
+
 
 #endif /* LVLSET_H_ */

@@ -194,7 +194,17 @@ void init_zalesak(double** G, int nx, int ny, int nghost, double dx, double dy){
 			G[i+nghost][j+nghost] = dist_from_zalesak((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R, cwidth, cdepth, cangle);
 		}
 	}
-
 	//printf("\n\n Zalesak Test: D = %f \n\n\n", dist_from_zalesak(0.0, -0.25, 0.0, 0.0, 1.0, .5, 1.5, 3.0/2.0*M_PI) );
-
+}
+void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
+	for (int i = -nghost; i<nx+nghost; i++){
+		for (int j = -nghost; j<ny+nghost; j++){
+			if(i != nx+nghost){
+				u[i+nghost][j+nghost] == (0.5-j*dy+dy/2.0);
+			}
+			if( j!= ny+nghost){
+				v[i+nghost][j+nghost] == (0.5-i*dx+dx/2.0);
+			}
+		}
+	}
 }
