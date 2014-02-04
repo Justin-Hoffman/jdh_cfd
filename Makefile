@@ -5,7 +5,7 @@ CPP = icpc
 CFLAGS = -std=c99 -llapack -lblas -lm -lstdc -openmp -xSSE4.2 -fno-alias -g -traceback
 CPPFLAGS =  -llapack -lblas -lm -openmp -xSSE4.2 -fno-alias -g -traceback
 DEBUG = 
-#DEBUG = -DDEBUG -DDBGMGM -DDBGMGM
+DEBUG = -DDEBUG -DDBGMGM -DDBGMGM -DDBGBCS
 
 all: jdh_solv
 

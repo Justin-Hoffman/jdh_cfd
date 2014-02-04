@@ -31,6 +31,9 @@ void solve_matrix(int n, double* a, double* b, double* c, double* v, double* x);
 /* Set Boundary Conditions */
 void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int  nx, int ny, double Re,struct slv_settings st);
 
+/* Set Neumann Boundary Conditions */
+void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int ny, int nghostx, int nghosty, struct slv_settings st);
+
 /* Get u and V */
 void get_uv(double** restrict u, double** restrict v, double** restrict usv,double** restrict vsv,int nx, int ny);
 
@@ -65,5 +68,8 @@ void write_matrix_2d(double** mat, int nx, int ny, char* filename);
 
 /*Init Settings*/
 struct slv_settings init_settings();
+
+/*Get weno5 weight*/
+double slv_psi_weno(double a, double b, double c, double d);
 
 #endif /* SLV_H_ */
