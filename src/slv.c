@@ -84,6 +84,10 @@ int main(int argc, char** argv)
 
 	int nghost = 3;
 	double** G = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** dGdxp = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** dGdxm = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** dGdyp = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** dGdym = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** omega = malloc(nx*sizeof(double*));memcntr += nx*sizeof(double*);
 
 	double** phi = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
@@ -113,6 +117,10 @@ int main(int argc, char** argv)
 	//Allocate Levelset Array
 	for(int i = -nghost; i<nx+nghost-1; i++){
 		G[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		dGdxp[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		dGdxm[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		dGdyp[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		dGdym[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 	}
 
 	for(int i = 0; i<nx+2; i++){
@@ -186,6 +194,13 @@ int main(int argc, char** argv)
 	printf("\n\t Initializing Zalesak's Disk into G \n");
 	init_zalesak(G, nx, ny, nghost, dx, dy);
 	printf("\n\t Done Initializing!\n\n");
+#ifdef DEBUG
+	printf("\n\t Setting Neumann BC for G\n\n");
+#endif DEBUG
+	set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost,st);
+#ifdef DEBUG
+	printf("\n\t Neumann BC done!\n\n");
+#endif DEBUG
 
 	double min = 0.00001;
 	/* Time Iteration Loop */
@@ -228,9 +243,9 @@ int main(int argc, char** argv)
 		if (t==nt-1){
 			get_uv(u,v,usv,vsv,nx,ny);
 			printf("\t Getting Vorticity\n");
-			get_vorticity(u,v,omega,dx,dy,nx,ny);	
+			get_vorticity(u,v,omega,dx,dy,nx,ny);
 			printf("\t Getting Stream Function\n");
-			get_stream(strm,strmnext,omega,dx,dy,nx,ny);	
+			get_stream(strm,strmnext,omega,dx,dy,nx,ny);
 			printf("\t Writing Data to Files\n");
 			write_matrix_2d(usv, nx, ny, "u.dat");
 			write_matrix_2d(vsv, nx, ny, "v.dat");
@@ -398,6 +413,33 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 		}
 	}
 	*/
+}
+/* Set Boundary Conditions */
+void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int ny, int nghostx, int nghosty, struct slv_settings st){
+#ifdef DBGBCS
+		printf("\t Neumann BC Lower/Upper \n");
+#endif
+	for (int i = -nghostx; i<nx+nghostx-1; i++){ //Lower and Upper Boundary
+		for (int j = 0;j < nghosty; j++){
+			x[i+nghostx][j] = x[i+nghostx][2*nghosty-j]; //lower
+			x[i+nghostx][ny+2*nghosty-2-j] = x[i+nghostx][ny-2+j]; //upper
+		}
+	}
+#ifdef DBGBCS
+		printf("\t Neumann BC Left/Right \n");
+#endif
+		double dd;
+	for (int i = 0; i<nghostx; i++){ //Left Right Boundary
+		printf("\t i = %i \n",i);
+		for (int j = -nghosty; j<ny+nghosty-1; j++){
+			printf("\t x(%i, %i) = x(%i, %i) \n",nx+2*nghostx-2-i,j+nghosty,nx-1+i,j+nghosty);
+			x[i][j+nghosty] = x[2*nghostx-i][j+nghosty];//left
+			x[nx+2*nghostx-2-i][j+nghosty] = x[nx-2+i][j+nghosty];//right
+		}
+	}
+#ifdef DBGBCS
+		printf("\t Neumann BC Done! \n");
+#endif
 }
 
 /* Get u and V */
@@ -901,6 +943,24 @@ void apply_projection(double** restrict phi, double** restrict u, double** restr
 			}
 		}
 	}	
+}
+
+/* Get weight for WENO5 term */
+double slv_psi_weno(double a, double b, double c, double d){
+	double is0 = 13.0*(a-b)*(a-b)+3.0*(a-3.0*b)*(a-3.0*b);
+	double is1 = 13.0*(b-c)*(b-c)+3.0*(b+c)*(b+c);
+	double is2 = 13.0*(c-d)*(c-d)+3.0*(3.0*c-d)*(3.0*c-d);
+
+	double eps = 0.0000000001; //1^-10
+
+	double a0 = 1.0/((eps+is0)*(eps+is0));
+	double a1 = 1.0/((eps+is1)*(eps+is1));
+	double a2 = 1.0/((eps+is2)*(eps+is2));
+
+	double w0 = a0/(a0+a1+a2);
+	double w2 = a2/(a0+a1+a2);
+
+	return (1.0/3.0)*w0*(a-2.0*b+c)+1.0/6.0*(w2-1.0/2.0)*(b-2.0*c+d);
 }
 /* Init Settings */
 struct slv_settings init_settings(){

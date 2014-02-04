@@ -4,7 +4,7 @@
  *  Created on: Jan 30, 2014
  *      Author: justin
  */
-#define M_PI 3.14159265358979323846L
+#define M_PI 3.14159265358979323846
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@
 double dist_from_arc(double x, double y, double xc, double yc, double R, double t0, double t1){
 	double tc = atan2((y-yc),(x-xc)); // Angle of current pt
 	if (tc < 0.0) {
-		tc = 2.0L*M_PI+tc;
+		tc = 2.0*M_PI+tc;
 	}
 	if ((tc > t0) && (tc < t1)){ //Point within blanked arc
 		double xp0 = xc + R*cos(t0);
@@ -74,7 +74,7 @@ double vec_angle(double x0, double y0, double x1, double y1){
 	if (mag1 != 0 && mag2 != 0){
 		return asin(vec_cross(x0,y0,x1,y1)/(mag1*mag2));
 	} else {
-		return 0.0l;
+		return 0.0;
 	}
 }
 double vec_mag(double x0, double y0){
@@ -86,7 +86,7 @@ double dist_from_box(double x, double y, double x0, double y0, double x1, double
 	double angle1 = vec_angle((x-x1),(y-y1), (x2-x1),(y2-y1));
 	double angle2 = vec_angle((x-x2),(y-y2), (x3-x2),(y3-y2));
 	double angle3 = vec_angle((x-x3),(y-y3), (x0-x3),(y0-y3));
-	double C = M_PI/2.0l;
+	double C = M_PI/2.0;
 	double d0 = dist_from_line(x,y,x0,y0,x1,y1);
 	double d1 = dist_from_line(x,y,x1,y1,x2,y2);
 	double d2 = dist_from_line(x,y,x2,y2,x3,y3);
@@ -120,7 +120,7 @@ double dist_from_notch(double x, double y, double x0, double y0, double x1, doub
 	double angle1 = vec_angle((x-x1),(y-y1), (x2-x1),(y2-y1));
 	double angle2 = vec_angle((x-x2),(y-y2), (x3-x2),(y3-y2));
 	double angle3 = vec_angle((x-x3),(y-y3), (x0-x3),(y0-y3));
-	double C = M_PI/2.0l;
+	double C = M_PI/2.0;
 	double d0 = dist_from_line(x,y,x0,y0,x1,y1);
 	double d1 = dist_from_line(x,y,x1,y1,x2,y2);
 	double d2 = dist_from_line(x,y,x2,y2,x3,y3);
@@ -159,10 +159,10 @@ double dist_from_notch(double x, double y, double x0, double y0, double x1, doub
 }
 
 double dist_from_zalesak(double x,double y,double xc,double yc, double R, double cwidth, double cdepth, double cangle){
-	double halfcut = atan2(cwidth/2.0l,R); //Trig to identify half angle of notch
-	double t0 = fmod((cangle-halfcut),(2.0l*M_PI)); //Arc angle at start of cut
-	double t1 = fmod((cangle+halfcut),(2.0l*M_PI)); //Arc angle at end of cut
-	double theta = fmod(atan2((x-xc),(y-yc)),(2.0l*M_PI)); // Angle of current pt
+	double halfcut = atan2(cwidth/2.0,R); //Trig to identify half angle of notch
+	double t0 = fmod((cangle-halfcut),(2.0*M_PI)); //Arc angle at start of cut
+	double t1 = fmod((cangle+halfcut),(2.0*M_PI)); //Arc angle at end of cut
+	double theta = fmod(atan2((x-xc),(y-yc)),(2.0*M_PI)); // Angle of current pt
 
 	if (dist_from_pt(x,y,xc,yc) < R){ // Inside Disk
 		double xn0 = xc+R*cos(t0); double yn0 = yc+R*sin(t0);
@@ -184,17 +184,17 @@ double dist_from_zalesak(double x,double y,double xc,double yc, double R, double
 
 void init_zalesak(double** G, int nx, int ny, int nghost, double dx, double dy){
 	double xc = 0.5;
-	double yc = 0.5;
+	double yc = 0.75;
 	double R = 0.15;
 	double cwidth = 0.05;
 	double cdepth = 0.25;
-	double cangle = M_PI*2.5l/2.0l;
+	double cangle = M_PI*3.0/2.0;
 	for (int i = -nghost; i<nx+nghost-1; i++){
-		for (int j = -nghost; j<ny+nghost; j++){
+		for (int j = -nghost; j<ny+nghost-1; j++){
 			G[i+nghost][j+nghost] = dist_from_zalesak((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R, cwidth, cdepth, cangle);
 		}
 	}
 
-	//printf("\n\n Zalesak Test: D = %f \n\n\n", dist_from_zalesak(0.0, -0.25, 0.0, 0.0, 1.0, .5, 1.5, 3.0L/2.0L*M_PI) );
+	//printf("\n\n Zalesak Test: D = %f \n\n\n", dist_from_zalesak(0.0, -0.25, 0.0, 0.0, 1.0, .5, 1.5, 3.0/2.0*M_PI) );
 
 }

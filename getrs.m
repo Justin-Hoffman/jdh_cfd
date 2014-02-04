@@ -80,7 +80,7 @@ function getrs(nx,ny,nprefix)
     
     
     figure(6)
-    [c,h] = contour(xxg,yyg,G',[-.1:.01:0.04]);
+    [c,h] = contour(xxg,yyg,G');%,[0 0 ]);
     clabel(c,h)
     axis equal
     grid on
