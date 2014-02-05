@@ -32,7 +32,7 @@ void solve_matrix(int n, double* a, double* b, double* c, double* v, double* x);
 void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int  nx, int ny, double Re,struct slv_settings st);
 
 /* Set Neumann Boundary Conditions */
-void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int ny, int nghostx, int nghosty, struct slv_settings st);
+void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int ny, int nghostx, int nghosty);
 
 /* Get u and V */
 void get_uv(double** restrict u, double** restrict v, double** restrict usv,double** restrict vsv,int nx, int ny);

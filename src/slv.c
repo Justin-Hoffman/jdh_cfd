@@ -84,6 +84,11 @@ int main(int argc, char** argv)
 
 	int nghost = 3;
 	double** G = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** G1 = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** G2 = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** dGdt = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** dGdt1 = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** dGdt2 = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** dGdxp = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** dGdxm = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** dGdyp = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
@@ -120,6 +125,11 @@ int main(int argc, char** argv)
 	//Allocate Levelset Array
 	for(int i = -nghost; i<nx+nghost-1; i++){
 		G[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		G1[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		G2[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		dGdt[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		dGdt1[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		dGdt2[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdxp[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdxm[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdyp[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
@@ -160,7 +170,7 @@ int main(int argc, char** argv)
 		strmnext[i+nghost] = malloc((ny+2+2*nghost)*sizeof(double));memcntr += (ny+2+2*nghost)*sizeof(double);
 		
 		for(int j=-nghost;j<ny+nghost+1;j++){
-			printf("\t (%i, %i) \n",i,j);
+			//printf("\t (%i, %i) \n",i,j);
 			if (i < nx+1){
 				u[i+nghost][j+nghost] = 0.0;
 				us[i+nghost][j+nghost] = 0.0;
@@ -204,11 +214,8 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 	printf("\n\t Setting Neumann BC for G\n\n");
 #endif DEBUG
-	set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost,st);
-#ifdef DEBUG
-	printf("\n\t Neumann BC done!\n\n");
-#endif DEBUG
-	void init_uv_test(u, v, nx, ny, nghost, dx, dy);
+	set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+	init_uv_test(u, v, nx, ny, nghost, dx, dy);
 
 	double min = 0.00001;
 	/* Time Iteration Loop */
@@ -248,24 +255,32 @@ int main(int argc, char** argv)
 #endif
 		//apply_projection(phi,u,us,v,vs,dx,dy,nx,ny,dt);
 
+#ifdef DEBUG
+		printf("\t Advecting G \n");
+#endif
+		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,nx,ny,nghost);
+		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+
+
 		/* Repeat */
 		if (t==nt-1){
-			get_uv(u,v,usv,vsv,nx,ny);
+			get_uv(u,v,usv,vsv,nx+nghost,ny+nghost);
 			printf("\t Getting Vorticity\n");
-			get_vorticity(u,v,omega,dx,dy,nx,ny);
+			//get_vorticity(u,v,omega,dx,dy,nx,ny);
 			printf("\t Getting Stream Function\n");
-			get_stream(strm,strmnext,omega,dx,dy,nx,ny);
+			//get_stream(strm,strmnext,omega,dx,dy,nx,ny);
 			printf("\t Writing Data to Files\n");
-			write_matrix_2d(usv, nx, ny, "u.dat");
-			write_matrix_2d(vsv, nx, ny, "v.dat");
-			write_matrix_2d(u,nx,ny+1,"uraw.dat");
-			write_matrix_2d(v,nx+1,ny,"vraw.dat");
+			write_matrix_2d(usv, nx+2*nghost-1, ny+2*nghost-1, "u.dat");
+			write_matrix_2d(vsv, nx+2*nghost-1, ny+2*nghost-1, "v.dat");
+			write_matrix_2d(u,nx+2*nghost,ny+2*nghost+1,"uraw.dat");
+			write_matrix_2d(v,nx+2*nghost+1,ny+2*nghost,"vraw.dat");
 			write_matrix_2d(us,nx,ny+1,"us.dat");
 			write_matrix_2d(vs,nx+1,ny,"vs.dat");
 			write_matrix_2d(omega, nx, ny, "omega.dat");
 			write_matrix_2d(phi,nx+1,ny+1,"phi.dat");
 			write_matrix_2d(strm,nx+2,ny+2,"stream.dat");
 			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1,"G.dat");
+			write_matrix_2d(dGdt,nx+2*nghost-1,ny+2*nghost-1,"dGdt.dat");
 		}
 	} 
 	
@@ -424,10 +439,11 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 	*/
 }
 /* Set Boundary Conditions */
-void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int ny, int nghostx, int nghosty, struct slv_settings st){
+void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int ny, int nghostx, int nghosty){
 #ifdef DBGBCS
 		printf("\t Neumann BC Lower/Upper \n");
 #endif
+	#pragma omp parallel for
 	for (int i = -nghostx; i<nx+nghostx-1; i++){ //Lower and Upper Boundary
 		for (int j = 0;j < nghosty; j++){
 			x[i+nghostx][j] = x[i+nghostx][2*nghosty-j]; //lower
@@ -437,11 +453,11 @@ void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int
 #ifdef DBGBCS
 		printf("\t Neumann BC Left/Right \n");
 #endif
-		double dd;
-	for (int i = 0; i<nghostx; i++){ //Left Right Boundary
-		printf("\t i = %i \n",i);
+	#pragma omp parallel for
+	for (int i = 0; i<nghostx; i++){ //Left and Right Boundary
+		//printf("\t i = %i \n",i);
 		for (int j = -nghosty; j<ny+nghosty-1; j++){
-			printf("\t x(%i, %i) = x(%i, %i) \n",nx+2*nghostx-2-i,j+nghosty,nx-1+i,j+nghosty);
+			//printf("\t x(%i, %i) = x(%i, %i) \n",nx+2*nghostx-2-i,j+nghosty,nx-1+i,j+nghosty);
 			x[i][j+nghosty] = x[2*nghostx-i][j+nghosty];//left
 			x[nx+2*nghostx-2-i][j+nghosty] = x[nx-2+i][j+nghosty];//right
 		}
@@ -457,8 +473,8 @@ void get_uv(double** restrict u, double** restrict v, double** restrict usv,doub
 	#pragma omp parallel for
 	for(int i = 0; i<nx; i++){
 		for(int j = 0;j<ny; j++){
-			usv[i][j] = (u[i][j]+u[i][j+1])/2.0;
-			vsv[i][j] = (v[i][j]+v[i+1][j])/2.0;
+			usv[i][j] = (u[i+1][j]+u[i][j])/2.0;
+			vsv[i][j] = (v[i][j+1]+v[i][j])/2.0;
 		}
 	}	
 }
@@ -956,6 +972,9 @@ void apply_projection(double** restrict phi, double** restrict u, double** restr
 
 /* Get weight for WENO5 term */
 double slv_psi_weno(double a, double b, double c, double d){
+#ifdef DBGWENO
+	printf("\t Calculating Psi WENO\n");
+#endif
 	double is0 = 13.0*(a-b)*(a-b)+3.0*(a-3.0*b)*(a-3.0*b);
 	double is1 = 13.0*(b-c)*(b-c)+3.0*(b+c)*(b+c);
 	double is2 = 13.0*(c-d)*(c-d)+3.0*(3.0*c-d)*(3.0*c-d);
@@ -963,8 +982,8 @@ double slv_psi_weno(double a, double b, double c, double d){
 	double eps = 0.0000000001; //1^-10
 
 	double a0 = 1.0/((eps+is0)*(eps+is0));
-	double a1 = 1.0/((eps+is1)*(eps+is1));
-	double a2 = 1.0/((eps+is2)*(eps+is2));
+	double a1 = 6.0/((eps+is1)*(eps+is1));
+	double a2 = 3.0/((eps+is2)*(eps+is2));
 
 	double w0 = a0/(a0+a1+a2);
 	double w2 = a2/(a0+a1+a2);
