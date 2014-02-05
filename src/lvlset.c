@@ -332,3 +332,34 @@ void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** re
 	}
 }
 
+double lvl_H (double fx, double a){
+	if(fx >= a){
+		return 1.0;
+	} else if (fx <= -a) {
+		return 0.0;
+	} else {
+		return 1.0/2.0*(fx/a+1/M_PI*sin(M_PI*fx/a))+0.5;
+	}
+}
+
+double get_shape_err(double** restrict G, double** restrict Gt, double volGt, double a, int nx, int ny, int nghost,double dx, double dy){
+
+	double err;
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			err += fabs(lvl_H(G[i+nghost][j+nghost], a) - lvl_H(Gt[i+nghost][j+nghost],a))*dx*dy;
+		}
+	}
+	return err/volGt;
+}
+double get_vol(double** restrict G, double a, int nx, int ny, int nghost,double dx, double dy){
+
+	double vol;
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			vol += lvl_H(G[i+nghost][j+nghost], a)*dx*dy;
+		}
+	}
+	return vol;
+}
+

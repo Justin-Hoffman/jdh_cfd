@@ -42,4 +42,7 @@
 
 	void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost);
 
+	double get_vol(double** restrict G, double a, int nx, int ny, int nghost,double dx, double dy);
+
+	double get_shape_err(double** restrict G, double** restrict Gt, double volGt, double a, int nx, int ny, int nghost,double dx, double dy);
 #endif /* LVLSET_H_ */

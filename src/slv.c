@@ -270,6 +270,18 @@ int main(int argc, char** argv)
 			printf("\t Getting Stream Function\n");
 			//get_stream(strm,strmnext,omega,dx,dy,nx,ny);
 			printf("\t Writing Data to Files\n");
+
+			//Zalesak Disk Volumes
+			double a = 0.005;
+			init_zalesak(G1, nx, ny, nghost, dx, dy);
+			double vol =  get_vol(G, a, nx, ny, nghost,dx,dy);
+			double vol_act =  get_vol(G1, a, nx, ny, nghost,dx,dy);
+			double shp_err = get_shape_err(G, G1, vol_act, a, nx, ny, nghost, dx, dy);
+			printf("\t volume 1 rot = %7.7f \n", vol);
+			printf("\t volume true = %7.7f \n", vol_act);
+			printf("\t volume error = %7.7f \n", fabs(vol-vol_act));
+			printf("\t shape error = %7.7f \n", shp_err);
+
 			write_matrix_2d(usv, nx+2*nghost-1, ny+2*nghost-1, "u.dat");
 			write_matrix_2d(vsv, nx+2*nghost-1, ny+2*nghost-1, "v.dat");
 			write_matrix_2d(u,nx+2*nghost,ny+2*nghost+1,"uraw.dat");
@@ -280,6 +292,7 @@ int main(int argc, char** argv)
 			write_matrix_2d(phi,nx+1,ny+1,"phi.dat");
 			write_matrix_2d(strm,nx+2,ny+2,"stream.dat");
 			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1,"G.dat");
+			write_matrix_2d(G1,nx+2*nghost-1,ny+2*nghost-1,"G1.dat");
 			write_matrix_2d(dGdt,nx+2*nghost-1,ny+2*nghost-1,"dGdt.dat");
 		}
 	} 
