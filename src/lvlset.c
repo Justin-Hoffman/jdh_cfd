@@ -12,6 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "lvlset.h"
+#include "slv.h"
 
 double dist_from_arc(double x, double y, double xc, double yc, double R, double t0, double t1){
 	double tc = atan2((y-yc),(x-xc)); // Angle of current pt
@@ -197,14 +198,137 @@ void init_zalesak(double** G, int nx, int ny, int nghost, double dx, double dy){
 	//printf("\n\n Zalesak Test: D = %f \n\n\n", dist_from_zalesak(0.0, -0.25, 0.0, 0.0, 1.0, .5, 1.5, 3.0/2.0*M_PI) );
 }
 void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
-	for (int i = -nghost; i<nx+nghost; i++){
-		for (int j = -nghost; j<ny+nghost; j++){
+	for (int i = -nghost; i<nx+nghost+1; i++){
+		for (int j = -nghost; j<ny+nghost+1; j++){
 			if(i != nx+nghost){
-				u[i+nghost][j+nghost] == (0.5-j*dy+dy/2.0);
+				u[i+nghost][j+nghost] = (0.5-(j*dy+dy/2));
+				//printf("u(%i, %i) = %7.7f\n",i+nghost,j+nghost,u[i+nghost][j+nghost]);
 			}
 			if( j!= ny+nghost){
-				v[i+nghost][j+nghost] == (0.5-i*dx+dx/2.0);
+				v[i+nghost][j+nghost] = -(0.5-(i*dx+dx/2));
 			}
 		}
 	}
 }
+
+void init_uv_test2(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
+	for (int i = -nghost; i<nx+nghost+1; i++){
+		for (int j = -nghost; j<ny+nghost+1; j++){
+			if(i != nx+nghost){
+				u[i+nghost][j+nghost] = -(0.5);
+				//printf("u(%i, %i) = %7.7f\n",i+nghost,j+nghost,u[i+nghost][j+nghost]);
+			}
+			if( j!= ny+nghost){
+				v[i+nghost][j+nghost] = 0.5;
+			}
+		}
+	}
+}
+
+void levelset_diff(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, int nx, int ny, int nghost){
+#ifdef DBGLVLST
+	printf("\t Calculating dGdx\n");
+#endif
+#pragma omp parallel for
+	for(int i = -nghost; i<nx+nghost-2; i++){
+		for(int j = -nghost; j<ny+nghost-1; j++){
+			dGdxp[i+nghost][j+nghost] = (G[i+nghost+1][j+nghost]-G[i+nghost][j+nghost]);
+			dGdxm[i+nghost+1][j+nghost] = dGdxp[i+nghost][j+nghost];
+		}
+	}
+#ifdef DBGLVLST
+	printf("\t Calculating dGdy\n");
+#endif
+	#pragma omp parallel for
+	for(int i = -nghost; i<nx+nghost-1; i++){
+		for(int j = -nghost; j<ny+nghost-2; j++){
+			dGdyp[i+nghost][j+nghost] = (G[i+nghost][j+nghost+1]-G[i+nghost][j+nghost]);
+			dGdym[i+nghost][j+nghost+1] = dGdxp[i+nghost][j+nghost];
+		}
+	}
+#ifdef DBGLVLST
+	printf("\t Calculating dGdt\n");
+#endif
+	#pragma omp parallel for
+	for(int i = 0; i<nx-1; i++){
+		for(int j = 0; j<ny-1; j++){
+
+			double uh = (u[i+nghost+1][j+nghost]+u[i+nghost][j+nghost])/2.0;
+			double vh = (v[i+nghost][j+nghost+1]+v[i+nghost][j+nghost])/2.0;
+
+			dGdt[i+nghost][j+nghost] = uh/(12.0*dx)*(-dGdxp[i+nghost-2][j+nghost]+7.0*dGdxp[i+nghost-1][j+nghost]+7.0*dGdxp[i+nghost][j+nghost]-dGdxp[i+nghost+1][j+nghost]) +
+										vh/(12.0*dy)*(-dGdyp[i+nghost][j+nghost-2]+7.0*dGdyp[i+nghost][j+nghost-1]+7.0*dGdyp[i+nghost][j+nghost]-dGdyp[i+nghost][j+nghost+1]);
+			if (uh >= 0){
+				dGdt[i+nghost][j+nghost] -= uh*slv_psi_weno(
+						(dGdxp[i+nghost-2][j+nghost]-dGdxp[i+nghost-3][j+nghost])/dx,
+						(dGdxp[i+nghost-1][j+nghost]-dGdxp[i+nghost-2][j+nghost])/dx,
+						(dGdxp[i+nghost-0][j+nghost]-dGdxp[i+nghost-1][j+nghost])/dx,
+						(dGdxp[i+nghost+1][j+nghost]-dGdxp[i+nghost-0][j+nghost])/dx);
+			} else {
+				dGdt[i+nghost][j+nghost] += uh*slv_psi_weno(
+						(dGdxp[i+nghost+2][j+nghost]-dGdxp[i+nghost+1][j+nghost])/dx,
+						(dGdxp[i+nghost+1][j+nghost]-dGdxp[i+nghost-0][j+nghost])/dx,
+						(dGdxp[i+nghost+0][j+nghost]-dGdxp[i+nghost-1][j+nghost])/dx,
+						(dGdxp[i+nghost-1][j+nghost]-dGdxp[i+nghost-2][j+nghost])/dx);
+			}
+			if (vh >= 0.0){
+				dGdt[i+nghost][j+nghost] -= vh*slv_psi_weno(
+						(dGdyp[i+nghost][j+nghost-2]-dGdyp[i+nghost][j+nghost-3])/dy,
+						(dGdyp[i+nghost][j+nghost-1]-dGdyp[i+nghost][j+nghost-2])/dy,
+						(dGdyp[i+nghost][j+nghost-0]-dGdyp[i+nghost][j+nghost-1])/dy,
+						(dGdyp[i+nghost][j+nghost+1]-dGdyp[i+nghost][j+nghost-0])/dy);
+			} else {
+				dGdt[i+nghost][j+nghost] += vh*slv_psi_weno(
+						(dGdyp[i+nghost][j+nghost+2]-dGdyp[i+nghost][j+nghost+1])/dy,
+						(dGdyp[i+nghost][j+nghost+1]-dGdyp[i+nghost][j+nghost+0])/dy,
+						(dGdyp[i+nghost][j+nghost+0]-dGdyp[i+nghost][j+nghost-1])/dy,
+						(dGdyp[i+nghost][j+nghost-1]-dGdyp[i+nghost][j+nghost-2])/dy);
+			}
+		}
+	}
+#ifdef DBGLVLST
+	printf("\t Done with dGdt \n");
+#endif
+}
+
+void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost){
+	levelset_diff(G,dGdt,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
+	#pragma omp parallel for
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			G[i+nghost][j+nghost] -= dt*dGdt[i+nghost][j+nghost];
+		}
+	}
+}
+void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost){
+	//Step1
+	levelset_diff(G,dGdt,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
+	#pragma omp parallel for
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			G1[i+nghost][j+nghost] = G[i+nghost][j+nghost]-dt*dGdt[i+nghost][j+nghost];
+		}
+	}
+	set_all_bcs_neumann(G1,dx,dy,nx,ny,nghost,nghost);
+	//Step2
+	levelset_diff(G1,dGdt1,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
+	#pragma omp parallel for
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			G2[i+nghost][j+nghost] = G1[i+nghost][j+nghost]+3.0/4.0*dt*dGdt[i+nghost][j+nghost]
+			                                               -1.0/4.0*dt*dGdt1[i+nghost][j+nghost];
+		}
+	}
+	set_all_bcs_neumann(G2,dx,dy,nx,ny,nghost,nghost);
+	//Step3
+	levelset_diff(G2,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx,ny,nghost);
+	#pragma omp parallel for
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			G[i+nghost][j+nghost] = G2[i+nghost][j+nghost]+1.0/12.0*dt*dGdt[i+nghost][j+nghost]
+			                                              +1.0/12.0*dt*dGdt1[i+nghost][j+nghost]
+			                                              -2.0/3.0 *dt*dGdt2[i+nghost][j+nghost];
+		}
+	}
+}
+

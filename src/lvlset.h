@@ -36,5 +36,10 @@
 
 	void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
 
+	void init_uv_test2(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
+
+	void levelset_diff(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm, double** restrict dGdyp, double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, int nx, int ny, int nghost);
+
+	void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost);
 
 #endif /* LVLSET_H_ */

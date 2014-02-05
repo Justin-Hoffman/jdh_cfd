@@ -1,0 +1,12 @@
+!SESSION 2014-02-04 11:53:30.148 -----------------------------------------------
+eclipse.buildId=I20120502-2000
+java.version=1.8.0-ea
+java.vendor=Oracle Corporation
+BootLoader constants: OS=linux, ARCH=x86_64, WS=gtk, NL=en_US
+Command-line arguments:  -os linux -ws gtk -arch x86_64
+
+!ENTRY org.eclipse.ui 4 4 2014-02-04 11:55:00.902
+!MESSAGE Plug-in 'org.eclipse.rephraserengine.ui.vpg' contributed an invalid Menu Extension (Path: 'org.eclipse.jdt.ui.refactoring.menu/debugging' is invalid): org.eclipse.rephraserengine.ui.BrowseVPGDatabaseAction
+
+!ENTRY org.eclipse.ui 2 2 2014-02-04 12:05:53.870
+!MESSAGE Invalid property category path: ValidationPropertiesPage (bundle: org.eclipse.wst.xml.ui, propertyPage: org.eclipse.wst.xml.ui.propertyPage.project.validation)
