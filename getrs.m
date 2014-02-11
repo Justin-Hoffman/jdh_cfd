@@ -101,15 +101,18 @@ function getrs(nx,ny,nprefix)
     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
     print( gcf, '-dpng', [nprefix 'Cont'])
     
-    figure(7)
-    [c,h] = contour(xxg,yyg,G1',[-1:.025:.5],'k');
-    clabel(c,h,'FontSize',7,'LabelSpacing',200)
-    xlabel('X');
-    ylabel('Y');
-    set(gcf, 'PaperPositionMode', 'manual');
-    set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
-    print( gcf, '-dpng', [nprefix 'DCont'])
+%     figure(7)
+%     [c,h] = contour(xxg,yyg,G1',[-1:.025:.5],'k');
+%     clabel(c,h,'FontSize',7,'LabelSpacing',200)
+%     xlabel('X');
+%     ylabel('Y');
+%     set(gcf, 'PaperPositionMode', 'manual');
+%     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
+%     print( gcf, '-dpng', [nprefix 'DCont'])
+
+figure(9)
+surf(xxg,yyg,G')
     
-    ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW2/
+%     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW2/
 
 

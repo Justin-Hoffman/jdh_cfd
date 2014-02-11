@@ -215,11 +215,11 @@ void init_uv_test2(double** u, double** v, int nx, int ny, int nghost, double dx
 	for (int i = -nghost; i<nx+nghost+1; i++){
 		for (int j = -nghost; j<ny+nghost+1; j++){
 			if(i != nx+nghost){
-				u[i+nghost][j+nghost] = -(0.5);
+				u[i+nghost][j+nghost] = 0.0;
 				//printf("u(%i, %i) = %7.7f\n",i+nghost,j+nghost,u[i+nghost][j+nghost]);
 			}
 			if( j!= ny+nghost){
-				v[i+nghost][j+nghost] = 0.5;
+				v[i+nghost][j+nghost] = 0.0;
 			}
 		}
 	}
@@ -291,6 +291,79 @@ void levelset_diff(double** restrict G,double** restrict dGdt,double** restrict 
 #endif
 }
 
+
+void reinit_diff(double** G, double** G0, double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, int nx, int ny, int nghost){
+	double eps = (dx+dy)/2.0;
+	double txp, txm, typ, tym, S;
+#ifdef DBGLVLST
+	printf("\t Calculating dGdx\n");
+#endif
+#pragma omp parallel for
+	for(int i = -nghost; i<nx+nghost-2; i++){
+		for(int j = -nghost; j<ny+nghost-1; j++){
+			dGdxp[i+nghost][j+nghost] = (G[i+nghost+1][j+nghost]-G[i+nghost][j+nghost]);
+			dGdxm[i+nghost+1][j+nghost] = dGdxp[i+nghost][j+nghost];
+		}
+	}
+#ifdef DBGLVLST
+	printf("\t Calculating dGdy\n");
+#endif
+	#pragma omp parallel for
+	for(int i = -nghost; i<nx+nghost-1; i++){
+		for(int j = -nghost; j<ny+nghost-2; j++){
+			dGdyp[i+nghost][j+nghost] = (G[i+nghost][j+nghost+1]-G[i+nghost][j+nghost]);
+			dGdym[i+nghost][j+nghost+1] = dGdxp[i+nghost][j+nghost];
+		}
+	}
+#ifdef DBGLVLST
+	printf("\t Calculating dGdt\n");
+#endif
+	#pragma omp parallel for private(txp,txm,typ,tym,S)
+	for(int i = 0; i<nx-1; i++){
+		for(int j = 0; j<ny-1; j++){
+
+			S = G0[i+nghost][j+nghost]/sqrt((G0[i+nghost][j+nghost]*G0[i+nghost][j+nghost]+eps*eps));
+			txp = 1.0/(12.0*dx)*(-dGdxp[i+nghost-2][j+nghost]+7.0*dGdxp[i+nghost-1][j+nghost]+7.0*dGdxp[i+nghost][j+nghost]-dGdxp[i+nghost+1][j+nghost]);
+			txm = txp;
+			typ = 1.0/(12.0*dy)*(-dGdyp[i+nghost][j+nghost-2]+7.0*dGdyp[i+nghost][j+nghost-1]+7.0*dGdyp[i+nghost][j+nghost]-dGdyp[i+nghost][j+nghost+1]);
+			tym = typ;
+
+			txm -=slv_psi_weno(
+					(dGdxp[i+nghost-2][j+nghost]-dGdxp[i+nghost-3][j+nghost])/dx,
+					(dGdxp[i+nghost-1][j+nghost]-dGdxp[i+nghost-2][j+nghost])/dx,
+					(dGdxp[i+nghost-0][j+nghost]-dGdxp[i+nghost-1][j+nghost])/dx,
+					(dGdxp[i+nghost+1][j+nghost]-dGdxp[i+nghost-0][j+nghost])/dx);
+			txp += slv_psi_weno(
+					(dGdxp[i+nghost+2][j+nghost]-dGdxp[i+nghost+1][j+nghost])/dx,
+					(dGdxp[i+nghost+1][j+nghost]-dGdxp[i+nghost-0][j+nghost])/dx,
+					(dGdxp[i+nghost+0][j+nghost]-dGdxp[i+nghost-1][j+nghost])/dx,
+					(dGdxp[i+nghost-1][j+nghost]-dGdxp[i+nghost-2][j+nghost])/dx);
+			tym -= slv_psi_weno(
+					(dGdyp[i+nghost][j+nghost-2]-dGdyp[i+nghost][j+nghost-3])/dy,
+					(dGdyp[i+nghost][j+nghost-1]-dGdyp[i+nghost][j+nghost-2])/dy,
+					(dGdyp[i+nghost][j+nghost-0]-dGdyp[i+nghost][j+nghost-1])/dy,
+					(dGdyp[i+nghost][j+nghost+1]-dGdyp[i+nghost][j+nghost-0])/dy);
+			typ += slv_psi_weno(
+					(dGdyp[i+nghost][j+nghost+2]-dGdyp[i+nghost][j+nghost+1])/dy,
+					(dGdyp[i+nghost][j+nghost+1]-dGdyp[i+nghost][j+nghost+0])/dy,
+					(dGdyp[i+nghost][j+nghost+0]-dGdyp[i+nghost][j+nghost-1])/dy,
+					(dGdyp[i+nghost][j+nghost-1]-dGdyp[i+nghost][j+nghost-2])/dy);
+
+			if (G[i+nghost][j+nghost] > 0.0){
+				dGdt[i+nghost][j+nghost] = S*(sqrt(fmax( fmax(txm,0.0)*fmax(txm,0.0) , fmin(txp,0.0)*fmin(txp,0.0) ) + fmax( fmax(tym,0.0)*fmax(tym,0.0),fmin(typ,0.0)*fmin(typ,0.0)))-1.0);
+			} else if (G[i+nghost][j+nghost] > 0.0) {
+				dGdt[i+nghost][j+nghost] = S*(sqrt(fmax( fmin(txm,0.0)*fmin(txm,0.0) , fmax(txp,0.0)*fmax(txp,0.0) ) + fmax( fmin(tym,0.0)*fmin(tym,0.0),fmax(typ,0.0)*fmax(typ,0.0)))-1.0);
+			} else {
+				dGdt[i+nghost][j+nghost] = 0.0;
+			}
+		}
+	}
+#ifdef DBGLVLST
+	printf("\t Done with dGdt \n");
+#endif
+}
+
+
 void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost){
 	levelset_diff(G,dGdt,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
 	#pragma omp parallel for
@@ -330,6 +403,50 @@ void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** re
 			                                              -2.0/3.0 *dt*dGdt2[i+nghost][j+nghost];
 		}
 	}
+}
+
+double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, double dt, int nx, int ny, int nghost){
+	//Step1
+	reinit_diff(G,G0,dGdt,dGdxp, dGdxm,dGdyp,dGdym, dx, dy, nx, ny, nghost);
+	#pragma omp parallel for
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			G1[i+nghost][j+nghost] = G[i+nghost][j+nghost]-dt*dGdt[i+nghost][j+nghost];
+		}
+	}
+	set_all_bcs_neumann(G1,dx,dy,nx,ny,nghost,nghost);
+	//Step2
+	//levelset_diff(G1,dGdt1,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
+	reinit_diff(G1,G0,dGdt1,dGdxp,dGdxm,dGdyp,dGdym, dx, dy, nx, ny, nghost);
+	#pragma omp parallel for
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			G2[i+nghost][j+nghost] = G1[i+nghost][j+nghost]+3.0/4.0*dt*dGdt[i+nghost][j+nghost]
+			                                               -1.0/4.0*dt*dGdt1[i+nghost][j+nghost];
+		}
+	}
+	set_all_bcs_neumann(G2,dx,dy,nx,ny,nghost,nghost);
+	//Step3
+	//levelset_diff(G2,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx,ny,nghost);
+	reinit_diff(G2,G0,dGdt2,dGdxp, dGdxm,dGdyp,dGdym, dx, dy, nx, ny, nghost);
+	double err;
+	double alpha = 3.0/2.0*dx;
+	int count = 0;
+	//#pragma omp parallel for
+	for(int i = 0; i<nx; i++){
+		for(int j = 0; j<ny; j++){
+			if (G[i+nghost][j+nghost] < alpha){
+			err += fabs((G[i+nghost][j+nghost])-(G2[i+nghost][j+nghost]+1.0/12.0*dt*dGdt[i+nghost][j+nghost]
+			                   																	  +1.0/12.0*dt*dGdt1[i+nghost][j+nghost]
+			                   																	  -2.0/3.0 *dt*dGdt2[i+nghost][j+nghost]));
+			count ++;
+			}
+			G[i+nghost][j+nghost] = G2[i+nghost][j+nghost]+1.0/12.0*dt*dGdt[i+nghost][j+nghost]
+																	  +1.0/12.0*dt*dGdt1[i+nghost][j+nghost]
+																	  -2.0/3.0 *dt*dGdt2[i+nghost][j+nghost];
+		}
+	}
+	return err/((double)count);
 }
 
 double lvl_H (double fx, double a){

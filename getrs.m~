@@ -86,16 +86,17 @@ function getrs(nx,ny,nprefix)
     
     
     figure(6)
-    [c,h] = contour(xxg,yyg,G',[0 0],'k','LineWidth',);
+    [c,h] = contour(xxg,yyg,G',[0 0],'k','LineWidth',1);
     %clabel(c,h)1
     hold on
-    [c,h] = contour(xxg,yyg,G1',[0 0],'--k','LineWidth',2);
+    [c,h] = contour(xxg,yyg,G1',[0 0],'k','LineWidth',2);
     %clabel(c,h)
     hold off
     xlabel('X');
     ylabel('Y');
     axis equal
     grid on
+    axis([0.2 0.8 0.5 1])
     set(gcf, 'PaperPositionMode', 'manual');
     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
     print( gcf, '-dpng', [nprefix 'Cont'])
@@ -109,6 +110,6 @@ function getrs(nx,ny,nprefix)
     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
     print( gcf, '-dpng', [nprefix 'DCont'])
     
-    ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW2/
+%     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW2/
 
 

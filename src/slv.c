@@ -23,6 +23,14 @@ void solve_matrix(int n, double* a, double* b, double* c, double* v, double* x)
 	}
 }
 
+//2D Array Copy
+void copy_2D(double** target, double** source, int nx, int ny){
+	size_t data_size = sizeof(double)*ny;
+	for(int i = 0; i<nx; i++){
+		memcpy(target[i], source[i], data_size);
+	}
+}
+
 int main(int argc, char** argv)
 {
 	/* Initialize some variables */
@@ -67,6 +75,7 @@ int main(int argc, char** argv)
 	/* Calcs for Input */
 	double dx = 1.0/((double)(nx-1));
 	double dy = 1.0/((double)(ny-1));
+	double reinitl2 = 0.0;
 
 	/* Echo to User */
 	printf("***\t2D Incompressible Navier Stokes Lid Driven Cavity Solver\t***\n");
@@ -84,6 +93,7 @@ int main(int argc, char** argv)
 
 	int nghost = 3;
 	double** G = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** G0 = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** G1 = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** G2 = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** dGdt = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
@@ -125,6 +135,7 @@ int main(int argc, char** argv)
 	//Allocate Levelset Array
 	for(int i = -nghost; i<nx+nghost-1; i++){
 		G[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		G0[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		G1[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		G2[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdt[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
@@ -259,6 +270,15 @@ int main(int argc, char** argv)
 		printf("\t Advecting G \n");
 #endif
 		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,nx,ny,nghost);
+		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+		copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
+		reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
+		int ind = 1;
+		while(reinitl2 > dt*dx*dy && ind < 400){
+			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
+			printf("Reinit step %i:\t L2 err = %7.7f\n",ind, reinitl2);
+			ind++;
+		}
 		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 
 

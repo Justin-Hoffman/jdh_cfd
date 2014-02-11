@@ -28,6 +28,8 @@ typedef enum {WALL,PERIODIC} jdh_BC;
 
 void solve_matrix(int n, double* a, double* b, double* c, double* v, double* x);
 
+void copy_2D(double** target, double** source, int nx, int ny);
+
 /* Set Boundary Conditions */
 void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int  nx, int ny, double Re,struct slv_settings st);
 
