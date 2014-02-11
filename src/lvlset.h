@@ -42,6 +42,12 @@
 
 	void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost);
 
+	void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost);
+
+	void reinit_diff(double** restrict G, double** restrict G0, double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, int nx, int ny, int nghost);
+
+	double reinit_advect_TVDRK3(double** restrict G, double** restrict G0, double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, double dt, int nx, int ny, int nghost);
+
 	double get_vol(double** restrict G, double a, int nx, int ny, int nghost,double dx, double dy);
 
 	double get_shape_err(double** restrict G, double** restrict Gt, double volGt, double a, int nx, int ny, int nghost,double dx, double dy);
