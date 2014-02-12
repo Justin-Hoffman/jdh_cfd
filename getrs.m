@@ -113,6 +113,6 @@ function getrs(nx,ny,nprefix)
 figure(9)
 surf(xxg,yyg,G')
     
-%     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW2/
+     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW3/
 
 

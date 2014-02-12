@@ -38,6 +38,7 @@ int main(int argc, char** argv)
 	int ny = 40;	
 	int nt = 1000;
 	int memcntr = 0;
+	int ninit = 1;
 	double Re = 100.0;
 	double dt = 0.001;
 	struct slv_settings st;
@@ -68,6 +69,9 @@ int main(int argc, char** argv)
 			i++;
 		} else if (strcmp(argv[i],"-XBC")==0){
 			dt = atof(argv[i+1]);
+			i++;
+		} else if (strcmp(argv[i],"-ninit")==0){
+			ninit = atoi(argv[i+1]);
 			i++;
 		}
 	}
@@ -271,15 +275,17 @@ int main(int argc, char** argv)
 #endif
 		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,nx,ny,nghost);
 		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
-		copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
-		reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
-		int ind = 1;
-		while(reinitl2 > dt*dx*dy && ind < 100){
+		if((t+1)%ninit == 0){
+			copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
 			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
-			ind++;
+			int ind = 1;
+			while(reinitl2 > dt*dx*dy && ind < 100){
+				reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
+				ind++;
+			}
+			printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
+			set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		}
-		printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
-		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 
 
 		/* Repeat */
