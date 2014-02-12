@@ -274,11 +274,11 @@ int main(int argc, char** argv)
 		copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
 		reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
 		int ind = 1;
-		while(reinitl2 > dt*dx*dy && ind < 400){
+		while(reinitl2 > dt*dx*dy && ind < 100){
 			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
-			printf("Reinit step %i:\t L2 err = %7.7f\n",ind, reinitl2);
 			ind++;
 		}
+		printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
 		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 
 
@@ -297,10 +297,10 @@ int main(int argc, char** argv)
 			double vol =  get_vol(G, a, nx, ny, nghost,dx,dy);
 			double vol_act =  get_vol(G1, a, nx, ny, nghost,dx,dy);
 			double shp_err = get_shape_err(G, G1, vol_act, a, nx, ny, nghost, dx, dy);
-			printf("\t volume 1 rot = %7.7f \n", vol);
-			printf("\t volume true = %7.7f \n", vol_act);
-			printf("\t volume error = %7.7f \n", fabs(vol-vol_act));
-			printf("\t shape error = %7.7f \n", shp_err);
+			printf("\t volume 1 rot = %7.7E \n", vol);
+			printf("\t volume true = %7.7E \n", vol_act);
+			printf("\t volume error = %7.7E \n", fabs(vol-vol_act));
+			printf("\t shape error = %7.7E \n", shp_err);
 
 			write_matrix_2d(usv, nx+2*nghost-1, ny+2*nghost-1, "u.dat");
 			write_matrix_2d(vsv, nx+2*nghost-1, ny+2*nghost-1, "v.dat");
