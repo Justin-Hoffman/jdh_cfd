@@ -351,7 +351,7 @@ void reinit_diff(double** G, double** G0, double** restrict dGdt,double** restri
 
 			if (G[i+nghost][j+nghost] > 0.0){
 				dGdt[i+nghost][j+nghost] = S*(sqrt(fmax( fmax(txm,0.0)*fmax(txm,0.0) , fmin(txp,0.0)*fmin(txp,0.0) ) + fmax( fmax(tym,0.0)*fmax(tym,0.0),fmin(typ,0.0)*fmin(typ,0.0)))-1.0);
-			} else if (G[i+nghost][j+nghost] > 0.0) {
+			} else if (G[i+nghost][j+nghost] < 0.0) {
 				dGdt[i+nghost][j+nghost] = S*(sqrt(fmax( fmin(txm,0.0)*fmin(txm,0.0) , fmax(txp,0.0)*fmax(txp,0.0) ) + fmax( fmin(tym,0.0)*fmin(tym,0.0),fmax(typ,0.0)*fmax(typ,0.0)))-1.0);
 			} else {
 				dGdt[i+nghost][j+nghost] = 0.0;
@@ -430,12 +430,12 @@ double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** r
 	//levelset_diff(G2,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx,ny,nghost);
 	reinit_diff(G2,G0,dGdt2,dGdxp, dGdxm,dGdyp,dGdym, dx, dy, nx, ny, nghost);
 	double err;
-	double alpha = 3.0/2.0*dx;
+	double alpha = 6.0*dx;
 	int count = 0;
 	//#pragma omp parallel for
 	for(int i = 0; i<nx; i++){
 		for(int j = 0; j<ny; j++){
-			if (G[i+nghost][j+nghost] < alpha){
+			if (fabs(G[i+nghost][j+nghost]) < alpha){
 			err += fabs((G[i+nghost][j+nghost])-(G2[i+nghost][j+nghost]+1.0/12.0*dt*dGdt[i+nghost][j+nghost]
 			                   																	  +1.0/12.0*dt*dGdt1[i+nghost][j+nghost]
 			                   																	  -2.0/3.0 *dt*dGdt2[i+nghost][j+nghost]));
@@ -446,7 +446,7 @@ double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** r
 																	  -2.0/3.0 *dt*dGdt2[i+nghost][j+nghost];
 		}
 	}
-	return err/((double)count);
+	return (err/((double)count));
 }
 
 double lvl_H (double fx, double a){
