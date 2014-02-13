@@ -190,12 +190,24 @@ void init_zalesak(double** G, int nx, int ny, int nghost, double dx, double dy){
 	double cwidth = 0.05;
 	double cdepth = 0.25;
 	double cangle = M_PI*3.0/2.0;
+	#pragma omp parallel for
 	for (int i = -nghost; i<nx+nghost-1; i++){
 		for (int j = -nghost; j<ny+nghost-1; j++){
 			G[i+nghost][j+nghost] = dist_from_zalesak((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R, cwidth, cdepth, cangle);
 		}
 	}
 	//printf("\n\n Zalesak Test: D = %f \n\n\n", dist_from_zalesak(0.0, -0.25, 0.0, 0.0, 1.0, .5, 1.5, 3.0/2.0*M_PI) );
+}
+void init_circle(double** G, int nx, int ny, int nghost, double dx, double dy){
+	double xc = 0.5;
+	double yc = 0.75;
+	double R = 0.15;
+	#pragma omp parallel for
+	for (int i = -nghost; i<nx+nghost-1; i++){
+		for (int j = -nghost; j<ny+nghost-1; j++){
+			G[i+nghost][j+nghost] = dist_from_circ((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R);
+		}
+	}
 }
 void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
 	for (int i = -nghost; i<nx+nghost+1; i++){
@@ -211,7 +223,7 @@ void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx,
 	}
 }
 
-void init_uv_test2(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
+void init_uv_test_static(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
 	for (int i = -nghost; i<nx+nghost+1; i++){
 		for (int j = -nghost; j<ny+nghost+1; j++){
 			if(i != nx+nghost){
@@ -224,6 +236,25 @@ void init_uv_test2(double** u, double** v, int nx, int ny, int nghost, double dx
 		}
 	}
 }
+void init_uv_test_t3(double** u, double** v, int nx, int ny, int nghost, double dx, double dy, double t){
+	double x;
+	double y;
+	#pragma omp parallel for private(x,y)
+	for (int i = -nghost; i<nx+nghost+1; i++){
+		x = (i*dx+dx/2);
+		for (int j = -nghost; j<ny+nghost+1; j++){
+			y = (j*dy+dy/2)-0.5;
+			if(i != nx+nghost){
+				u[i+nghost][j+nghost] = -cos(M_PI*t/8.0)*sin(M_PI*x)*sin(M_PI*x)*sin(2.0*M_PI*y);
+			}
+			if( j!= ny+nghost){
+				v[i+nghost][j+nghost] = -cos(M_PI*t/8.0)*sin(2.0*M_PI*x)*cos(M_PI*y)*cos(M_PI*y);
+			}
+		}
+	}
+}
+
+
 
 void levelset_diff(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, int nx, int ny, int nghost){
 #ifdef DBGLVLST
@@ -373,8 +404,9 @@ void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** r
 		}
 	}
 }
-void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost){
+void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, double time, int nx, int ny, int nghost){
 	//Step1
+	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time);
 	levelset_diff(G,dGdt,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
 	#pragma omp parallel for
 	for(int i = 0; i<nx; i++){
@@ -384,6 +416,7 @@ void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** re
 	}
 	set_all_bcs_neumann(G1,dx,dy,nx,ny,nghost,nghost);
 	//Step2
+	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time+1.0/4.0*dt);
 	levelset_diff(G1,dGdt1,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
 	#pragma omp parallel for
 	for(int i = 0; i<nx; i++){
@@ -394,6 +427,7 @@ void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** re
 	}
 	set_all_bcs_neumann(G2,dx,dy,nx,ny,nghost,nghost);
 	//Step3
+	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time+2.0/3.0*dt);
 	levelset_diff(G2,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx,ny,nghost);
 	#pragma omp parallel for
 	for(int i = 0; i<nx; i++){

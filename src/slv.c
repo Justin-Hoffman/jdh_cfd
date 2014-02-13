@@ -37,10 +37,13 @@ int main(int argc, char** argv)
 	int nx = 40;
 	int ny = 40;	
 	int nt = 1000;
+	int nsave = nt-1;
+	int saves;
 	int memcntr = 0;
 	int ninit = 1;
 	double Re = 100.0;
 	double dt = 0.001;
+	double time = 0.0;
 	struct slv_settings st;
 	st = init_settings();
 	st.YBC = WALL;
@@ -60,6 +63,9 @@ int main(int argc, char** argv)
 			i++;
 		} else if (strcmp(argv[i],"-nt")==0){
 			nt = atoi(argv[i+1]);
+			i++;
+		} else if (strcmp(argv[i],"-nsave")==0){
+			nsave = atoi(argv[i+1]);
 			i++;
 		} else if (strcmp(argv[i],"-Re")==0){
 			Re = atof(argv[i+1]);
@@ -224,21 +230,25 @@ int main(int argc, char** argv)
 
 #endif
 	printf("\n\t Initializing Zalesak's Disk into G \n");
-	init_zalesak(G, nx, ny, nghost, dx, dy);
+	//init_zalesak(G, nx, ny, nghost, dx, dy);
+	init_circle(G, nx, ny, nghost, dx, dy);
 	printf("\n\t Done Initializing!\n\n");
 #ifdef DEBUG
 	printf("\n\t Setting Neumann BC for G\n\n");
 #endif DEBUG
 	set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
-	init_uv_test(u, v, nx, ny, nghost, dx, dy);
+	//init_uv_test(u, v, nx, ny, nghost, dx, dy);
+
+	//init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,0.0);
 
 	double min = 0.00001;
 	/* Time Iteration Loop */
 	for(int t = 0;t<nt;t++){
+		time = t*dt;
 		if(t > nt*9.0/10.0){
 			min = 0.00001;
 		}
-		if(t%1000==0){
+		if(t%100==0){
 			printf("\t %i / %i \n",t,nt);
 		}
 #ifdef DEBUG
@@ -273,20 +283,27 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 		printf("\t Advecting G \n");
 #endif
-		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,nx,ny,nghost);
+		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,time,nx,ny,nghost);
 		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		if((t+1)%ninit == 0){
 			copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
-			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
+			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
 			int ind = 1;
-			while(reinitl2 > dt*dx*dy && ind < 100){
-				reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/10.0,nx,ny,nghost);
+			while(reinitl2 > dt*dx*dy && ind < 150){
+				reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
 				ind++;
 			}
 			printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
 			set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		}
 
+		/*
+		if((t+1) % nsave == 0) {
+			char* fname;
+			write_matrix_2d(usv, nx+2*nghost-1, ny+2*nghost-1, sprintf("u.%i",t) );
+			write_matrix_2d(vsv, nx+2*nghost-1, ny+2*nghost-1, sprintf("v.%i",t) );
+			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1, sprintf("G.%i",t) );
+		}*/
 
 		/* Repeat */
 		if (t==nt-1){
@@ -299,7 +316,7 @@ int main(int argc, char** argv)
 
 			//Zalesak Disk Volumes
 			double a = 0.005;
-			init_zalesak(G1, nx, ny, nghost, dx, dy);
+			init_circle(G1, nx, ny, nghost, dx, dy);
 			double vol =  get_vol(G, a, nx, ny, nghost,dx,dy);
 			double vol_act =  get_vol(G1, a, nx, ny, nghost,dx,dy);
 			double shp_err = get_shape_err(G, G1, vol_act, a, nx, ny, nghost, dx, dy);
