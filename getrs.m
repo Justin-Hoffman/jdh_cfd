@@ -49,14 +49,14 @@ function getrs(nx,ny,nprefix)
 %     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 4 4])
 %     print( gcf, '-dpng', [nprefix 'Vort'])
 %     
-%     %% Fig 3
-%     figure(3)
-%     quiver(xxg,yyg,u',v')
-%     grid on
-%     axis equal
-%     set(gcf, 'PaperPositionMode', 'manual');
-%     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 4 4])
-%     print( gcf, '-dpng', [nprefix 'Quiv'])
+    %% Fig 3
+    figure(3)
+    quiver(xxg,yyg,u',v',2)
+    grid on
+    axis equal
+    set(gcf, 'PaperPositionMode', 'manual');
+    set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 4 4])
+    print( gcf, '-dpng', [nprefix 'Quiv'])
 %  
 %     
 %     umax = max(u(ceil(end/2),:));
@@ -96,7 +96,7 @@ function getrs(nx,ny,nprefix)
     ylabel('Y');
     axis equal
     grid on
-    axis([0.2 0.8 0.5 1])
+%     axis([0.2 0.8 0.5 1])
     set(gcf, 'PaperPositionMode', 'manual');
     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
     print( gcf, '-dpng', [nprefix 'Cont'])
@@ -113,6 +113,6 @@ function getrs(nx,ny,nprefix)
 figure(9)
 surf(xxg,yyg,G')
     
-     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW3/
+%     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW3/
 
 

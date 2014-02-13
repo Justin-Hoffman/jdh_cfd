@@ -34,15 +34,18 @@
 
 	void init_zalesak(double** G, int nx, int ny, int nghost, double dx, double dy);
 
+	void init_circle(double** G, int nx, int ny, int nghost, double dx, double dy);
+
 	void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
 
-	void init_uv_test2(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
+
+	void init_uv_test_static(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
 
 	void levelset_diff(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm, double** restrict dGdyp, double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, int nx, int ny, int nghost);
 
 	void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost);
 
-	void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost);
+	void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt,double time, int nx, int ny, int nghost);
 
 	void reinit_diff(double** restrict G, double** restrict G0, double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, int nx, int ny, int nghost);
 
