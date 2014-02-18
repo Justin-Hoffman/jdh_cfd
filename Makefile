@@ -2,8 +2,8 @@
 CC = icc 
 CPP = icpc
 # Compile-time flags 
-CFLAGS = -std=c99 -llapack -lblas -lm -lstdc -openmp -xSSE4.2 -fno-alias -g -traceback
-CPPFLAGS =  -llapack -lblas -lm -openmp -xSSE4.2 -fno-alias -g -traceback
+CFLAGS = -std=c99 -llapack -lblas -lm -lstdc -openmp -xSSE4.2 -fno-alias -g -O3 -traceback
+CPPFLAGS =  -llapack -lblas -lm -openmp -xSSE4.2 -fno-alias -g -O3 -traceback
 DEBUG = 
 #DEBUG = -DDEBUG -DDBGMGM -DDBGMEM -DDBGBCS -DDBGLVLST
 
