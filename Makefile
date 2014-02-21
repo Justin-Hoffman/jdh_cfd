@@ -9,8 +9,8 @@ DEBUG =
 
 all: jdh_solv
 
-jdh_solv: slv.o lvlset.o mgmres.o
-	$(CPP) ./src/slv.o ./src/lvlset.o ./src/mgmres.o $(CPPFLAGS) $(DEBUG) -o jdh_solv
+jdh_solv: slv.o lvlset.o mgmres.o util.o
+	$(CPP) ./src/slv.o ./src/lvlset.o ./src/mgmres.o ./src/util.o $(CPPFLAGS) $(DEBUG) -o jdh_solv
 
 slv.o: 
 	$(CC) -c ./src/slv.c $(CFLAGS) $(DEBUG) -o ./src/slv.o
@@ -20,6 +20,10 @@ lvlset.o:
 	
 mgmres.o:
 	$(CC) -c ./src/mgmres.c $(CFLAGS) $(DEBUG) -o ./src/mgmres.o
+	
+util.o:
+	$(CC) -c ./src/util.c $(CFLAGS) $(DEBUG) -o ./src/util.o
+	
 	
 clean:
 	rm -rf ./src/*o jdh_solv ./*.dat
