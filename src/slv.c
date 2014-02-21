@@ -7,6 +7,7 @@
 #include "slv.h"
 #include "mgmres.h"
 #include "lvlset.h"
+#include "util.h"
 
 
 /* Tri-Diagonal Solver */
@@ -38,7 +39,7 @@ int main(int argc, char** argv)
 	int ny = 40;	
 	int nt = 1000;
 	int nsave = nt-1;
-	int saves;
+	int saves = 0;
 	int memcntr = 0;
 	int ninit = 1;
 	double Re = 100.0;
@@ -52,7 +53,17 @@ int main(int argc, char** argv)
 	st.XLV = 0.0;
 	st.XConst = 0.0;
 	st.YConst = 0.0;
-	
+
+	/*Heapsort Test
+	int Ni[6] = {0,1,2,3,4,5};
+	int Nj[6] = {0,1,2,3,4,5};
+	int ntest = 5;
+	double R[6] = {0.0,2.0,3.0,1.0,1.1,2.5,-2.2};
+	print_array(R, ntest+1);
+	heapsort(R, Ni, Nj, ntest);
+	print_array(R, ntest+1);
+	*/
+
 	/* Parse Input Arguments */
 	for(int i = 0; i<argc-1; i++){
 		if(strcmp(argv[i],"-nx")==0){
@@ -289,7 +300,7 @@ int main(int argc, char** argv)
 			copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
 			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
 			int ind = 1;
-			while(reinitl2 > dt*dx*dy && ind < 150){
+			while(reinitl2 > dt*dx && ind < 150){
 				reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
 				ind++;
 			}
@@ -297,13 +308,13 @@ int main(int argc, char** argv)
 			set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		}
 
-		/*
-		if((t+1) % nsave == 0) {
-			char* fname;
-			write_matrix_2d(usv, nx+2*nghost-1, ny+2*nghost-1, sprintf("u.%i",t) );
-			write_matrix_2d(vsv, nx+2*nghost-1, ny+2*nghost-1, sprintf("v.%i",t) );
-			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1, sprintf("G.%i",t) );
-		}*/
+		if( ((t+1)%nsave) == 0) {
+			char fname[50];
+			//strcopy(fname,"u.");
+			sprintf(&fname,"G.%i",saves);
+			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1,fname);
+			saves++;
+		}
 
 		/* Repeat */
 		if (t==nt-1){
@@ -1071,5 +1082,13 @@ void write_matrix_2d(double** mat, int nx, int ny, char* filename)
 	for (int i = 0; i<nx; i++){
 		count = fwrite(mat[i],sizeof(double),ny,file);
 	}
+}
+
+void print_array(double* X, int n){
+	printf("\n X = {");
+	for(int i = 0; i < n; i++){
+		printf("%f,",X[i]);
+	}
+	printf("}\n");
 }
 

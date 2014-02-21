@@ -74,4 +74,7 @@ struct slv_settings init_settings();
 /*Get weno5 weight*/
 double slv_psi_weno(double a, double b, double c, double d);
 
+void print_array(double* X, int n);
+
+
 #endif /* SLV_H_ */
