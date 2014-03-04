@@ -303,6 +303,7 @@ int main(int argc, char** argv)
 		printf("\t Advecting G \n");
 #endif
 		reinit_FMM(G,G0,Markers,FMM,FMMi,FMMj, dx, dy, dt, nx, ny,nghost);
+		/*
 		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,time,nx,ny,nghost);
 		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		if((t+1)%ninit == 0){
@@ -1114,7 +1115,7 @@ void print_array(double* X, int n){
 void print_array_int(int* X, int n){
 	printf("\n X = {");
 	for(int i = 0; i < n; i++){
-		printf("%i,",X[i]);
+		printf("%2.2i,",X[i]);
 	}
 	printf("}\n");
 }

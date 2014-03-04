@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include "lvlset.h"
 #include "slv.h"
+#include "util.h"
 
 double dist_from_arc(double x, double y, double xc, double yc, double R, double t0, double t1){
 	double tc = atan2((y-yc),(x-xc)); // Angle of current pt
@@ -498,28 +499,35 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 	double Large = 1000000.0;//Million
 	printf("Marker 1 \n");
 	//Find Accepted
-	for (int i = 0; i < nx; i++){
-		for(int j = 0; j < ny; j++){
-
-			if(G[i+nghost][j+nghost] >= 0.0){//Positive
-				//If sign changed
-				if((G[i+nghost+1][j+nghost] < 0.0) || (G[i+nghost-1][j+nghost] < 0.0) ||
-						(G[i+nghost][j+nghost+1] < 0.0) || (G[i+nghost][j+nghost-1] < 0.0)){
-					Markers[i+nghost][j+nghost]  = +1;
-					FMM[nAccept] = G[i+nghost][j+nghost];
-					FMMi[nAccept] = i;
-					FMMj[nAccept] = j;
-					nAccept++;
+	for (int i = -nghost; i < nx+nghost-1; i++){
+		for(int j = -nghost; j < ny+nghost-1; j++){
+			if(i<nx && i > -1 && j < ny && j>-1){
+				if(G[i+nghost][j+nghost] >= 0.0){//Positive
+					//If sign changed
+					if((G[i+nghost+1][j+nghost] < 0.0) || (G[i+nghost-1][j+nghost] < 0.0) ||
+							(G[i+nghost][j+nghost+1] < 0.0) || (G[i+nghost][j+nghost-1] < 0.0)){
+						Markers[i+nghost][j+nghost]  = +1;
+						FMM[nAccept] = G[i+nghost][j+nghost];
+						FMMi[nAccept] = i;
+						FMMj[nAccept] = j;
+						nAccept++;
+					}
+				} else { //Negative
+					//If sign changed
+					if((G[i+nghost+1][j+nghost] > 0.0) || (G[i+nghost-1][j+nghost] > 0.0) ||
+							(G[i+nghost][j+nghost+1] > 0.0) || (G[i+nghost][j+nghost-1] > 0.0)){
+						Markers[i+nghost][j+nghost]  = -1;
+						FMM[nAccept] = -G[i+nghost][j+nghost];
+						FMMi[nAccept] = i;
+						FMMj[nAccept] = j;
+						nAccept++;
+					}
 				}
-			} else { //Negative
-				//If sign changed
-				if((G[i+nghost+1][j+nghost] > 0.0) || (G[i+nghost-1][j+nghost] > 0.0) ||
-						(G[i+nghost][j+nghost+1] > 0.0) || (G[i+nghost][j+nghost-1] > 0.0)){
-					Markers[i+nghost][j+nghost]  = -1;
-					FMM[nAccept] = -G[i+nghost][j+nghost];
-					FMMi[nAccept] = i;
-					FMMj[nAccept] = j;
-					nAccept++;
+			} else {
+				if(G[i+nghost][j+nghost] >= 0.0) {
+					Markers[i+nghost][j+nghost]  = 3;
+				} else {
+					Markers[i+nghost][j+nghost]  = -3;
 				}
 			}
 		}
@@ -587,106 +595,50 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 	double alpha,beta,a,b,A,B,C,Gtemp;
 	int count = 0;
 	write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.0");
-/*
+
 	while (nClose > 0){
 		i = Closei[0];
 		j = Closej[0];
-
-		a = fmin(fabs(G[i+nghost+1][j+nghost]),fabs(G[i+nghost-1][j+nghost]));
-		b = fmin(fabs(G[i+nghost][j+nghost+1]),fabs(G[i+nghost][j+nghost+1]));
-
-		if(Markers[i+nghost+1][j+nghost] == 1 || Markers[i+nghost-1][j+nghost] == 1 || Markers[i+nghost+1][j+nghost] == -1 || Markers[i+nghost-1][j+nghost] == -1){
-			alpha = 1.0;
-		} else {
-			alpha = 0.0;
-		}
-		if(Markers[i+nghost][j+nghost+1] == 1 || Markers[i+nghost][j+nghost-1] == 1 || Markers[i+nghost][j+nghost+1] == -1 || Markers[i+nghost][j+nghost-1] == -1){
-					beta = 1.0;
-		} else {
-			beta = 0.0;
-		}
-		A = alpha+beta;
-		B = -2*(alpha*a+beta*b);
-		C = alpha*a*a+beta*b*b-dx*dy;
-		Gtemp = (-B+sqrt(B*B-4*A*C))/(2*A);
-		if (Gtemp < 0) {
-			printf("\n******* NEGATIVE GTEMP *******\n");
-			printf("A = %f, B = %f, C = %f \n\n", A, B, C);
-		}
-
-
-		if(G[i+nghost][j+nghost]  > 0.0){
-			Close[0] = Gtemp;
-			G[i+nghost][j+nghost] = Gtemp;
-		} else {
-			Close[0] = -Gtemp;
-			G[i+nghost][j+nghost] = -Gtemp;
-		}
+		Markers[i+nghost][j+nghost] = (Markers[i+nghost][j+nghost] > 0) ? 1 : -1;
+		printf("i,j = %i,%i\n",i,j);
 		nAccept++;
-		Close = &Close[1];
-		Closei = &Closei[1];
-		Closej = &Closej[1];
-		nClose -= 1;
+		nClose--;
+		Close++;// = &Close[1];
+		Closei++;// = &Closei[1];
+		Closej++;// = &Closej[1];
+
 
 		//Fix +-i
-		if(i>0 && i<(nx-1)){
-			if(Markers[i+nghost+1][j+nghost] == 3){
-				Markers[i+nghost+1][j+nghost] = 2;
-				Close[nClose] = G[i+nghost+1][j+nghost];
-				Closei[nClose] = i+1;
-				Closej[nClose] = j;
-				nClose++;
-			} else if(Markers[i+nghost+1][j] == -3){
-				Markers[i+nghost+1][j+nghost] = -2;
-				Close[nClose] = -G[i+nghost+1][j+nghost];
-				Closei[nClose] = i+1;
-				Closej[nClose] = j;
-				nClose++;
+		if(i<(nx-1)){
+			if(Markers[i+nghost+1][j+nghost] != 1 && Markers[i+nghost+1][j] != -1){
+				nClose = G_from_flux(i+1, j, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+				printf("Added i+ %f\n",G[i+nghost+1][j+nghost]);
 			}
-			if(Markers[i+nghost-1][j+nghost] == 3){
-				Markers[i+nghost+1][j+nghost] = 2;
-				Close[nClose] = G[i+nghost+1][j+nghost];
-				Closei[nClose] = i-1;
-				Closej[nClose] = j;
-				nClose++;
-			} else if(Markers[i+nghost-1][j+nghost] == -3){
-				Markers[i+nghost-1][j+nghost] = -2;
-				Close[nClose] = -G[i+nghost-1][j+nghost];
-				Closei[nClose] = i-1;
-				Closej[nClose] = j;
-				nClose++;
+		}
+		if(i>1){
+			if(Markers[i+nghost-1][j+nghost] != 1 && Markers[i+nghost-1][j+nghost] != -1){
+				nClose = G_from_flux(i-1, j, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+				printf("Added i- = %f \n",G[i+nghost-1][j+nghost]);
 			}
 		}
 		//Fix +-j
-		if(j > 0 && j < (ny-1)){
-			if(Markers[i+nghost][j+nghost+1] == 3){
-				Markers[i+nghost][j+nghost+1] = 2;
-				Close[nClose] = G[i+nghost][j+nghost+1];
-				Closei[nClose] = i;
-				Closej[nClose] = j+1;
-				nClose++;
-			} else if(Markers[i+nghost+1][j+nghost+1] == -3){
-				Markers[i+nghost][j+nghost+1] = -2;
-				Close[nClose] = -G[i+nghost][j+nghost+1];
-				Closei[nClose] = i;
-				Closej[nClose] = j+1;
-				nClose++;
-			}
-			if(Markers[i+nghost][j+nghost-1] == 3){
-				Markers[i+nghost][j+nghost-1] = 2;
-				Close[nClose] = G[i+nghost][j+nghost-1];
-				Closei[nClose] = i;
-				Closej[nClose] = j-1;
-				nClose++;
-			} else if(Markers[i+nghost][j+nghost-1] == -3){
-				Markers[i+nghost][j+nghost-1] = -2;
-				Close[nClose] = -G[i+nghost][j+nghost-1];
-				Closei[nClose] = i;
-				Closej[nClose] = j-1;
-				nClose++;
+		if(j < (ny-1)){
+			if(Markers[i+nghost][j+nghost+1] != 1 && Markers[i+nghost][j+nghost+1] != -1){
+				nClose = G_from_flux(i, j+1, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+				printf("Added j+ = %f \n",G[i+nghost][j+nghost+1]);
 			}
 		}
+		if(j > 1){
+			if(Markers[i+nghost][j+nghost-1] != 1 && Markers[i+nghost][j+nghost-1] != -1){
+				nClose = G_from_flux(i, j-1, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+				printf("Added j- = %f\n",G[i+nghost][j+nghost-1]);
+			}
+		}
+		print_array(Close, nClose);
 		heapsort(Close,Closei,Closej,nClose);//Resort
+		print_array(Close, nClose);
+		print_array_int(Closei, nClose);
+		print_array_int(Closej, nClose);
 		count++;
 		if (count == 1){
 			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.1");
@@ -694,12 +646,21 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 		if (count == 2){
 			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.2");
 		}
+		if (count == 30){
+			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.30");
+		}
+		if (count == 40){
+			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.40");
+		}
+		if (count == 50){
+			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.50");
+		}
 		if (count == 100){
 			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.100");
 		}
-		printf("\tCount = %i, nAccept = %i, nClose = %i \n",count,nAccept, nClose);
-		printf("i,j = %i,%i\n",i,j);
-	} */
+		printf("*** Count = %i, nAccept = %i, nClose = %i \n\n",count,nAccept, nClose);
+
+	}
 
 }
 
