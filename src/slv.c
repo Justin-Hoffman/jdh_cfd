@@ -124,6 +124,13 @@ int main(int argc, char** argv)
 	double** dGdxm = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** dGdyp = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** dGdym = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+
+	double* FMM = malloc((nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(double)); memcntr += (nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(double);
+	int** Markers = malloc((nx+2*nghost-1)*sizeof(int*));memcntr += (nx+2*nghost-1)*sizeof(int*);
+	int* FMMi = malloc((nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int)); memcntr += (nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int);
+	int* FMMj = malloc((nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int)); memcntr += (nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int);
+
+
 	double** omega = malloc(nx*sizeof(double*));memcntr += nx*sizeof(double*);
 
 	double** phi = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
@@ -166,6 +173,7 @@ int main(int argc, char** argv)
 		dGdxm[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdyp[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdym[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		Markers[i+nghost] = malloc((ny+2*nghost-1)*sizeof(int));memcntr += (ny+2*nghost-1)*sizeof(int);
 	}
 #ifdef DBGMEM
 	printf("\t Malloc Normal Arrays\n");
@@ -294,6 +302,7 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 		printf("\t Advecting G \n");
 #endif
+		reinit_FMM(G,G0,Markers,FMM,FMMi,FMMj, dx, dy, dt, nx, ny,nghost);
 		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,time,nx,ny,nghost);
 		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		if((t+1)%ninit == 0){
@@ -304,7 +313,7 @@ int main(int argc, char** argv)
 				reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
 				ind++;
 			}
-			printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
+			//printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
 			set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		}
 
@@ -348,6 +357,7 @@ int main(int argc, char** argv)
 			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1,"G.dat");
 			write_matrix_2d(G1,nx+2*nghost-1,ny+2*nghost-1,"G1.dat");
 			write_matrix_2d(dGdt,nx+2*nghost-1,ny+2*nghost-1,"dGdt.dat");
+			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.dat");
 		}
 	} 
 	
@@ -1084,6 +1094,16 @@ void write_matrix_2d(double** mat, int nx, int ny, char* filename)
 	}
 }
 
+/* Write 2D Matrix to File */
+void write_matrix_2d_int(int** mat, int nx, int ny, char* filename)
+{
+	FILE *file = fopen(filename,"w");
+	size_t count;
+	for (int i = 0; i<nx; i++){
+		count = fwrite(mat[i],sizeof(int),ny,file);
+	}
+}
+
 void print_array(double* X, int n){
 	printf("\n X = {");
 	for(int i = 0; i < n; i++){
@@ -1091,4 +1111,10 @@ void print_array(double* X, int n){
 	}
 	printf("}\n");
 }
-
+void print_array_int(int* X, int n){
+	printf("\n X = {");
+	for(int i = 0; i < n; i++){
+		printf("%i,",X[i]);
+	}
+	printf("}\n");
+}

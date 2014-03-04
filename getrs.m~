@@ -23,6 +23,7 @@ function getrs(nx,ny,nprefix)
     G = frdr('G.dat',nx+2*nghost-1, ny+2*nghost-1);
     G1 = frdr('G1.dat',nx+2*nghost-1, ny+2*nghost-1);
     dGdt = frdr('dGdt.dat',nx+2*nghost-1, ny+2*nghost-1);
+    Markers = frdrint('Markers.dat',nx+2*nghost-1, ny+2*nghost-1);
     
 %     %% Fig 1
 %     [xx, yy] = meshgrid(linspace(0,1,nx),linspace(0,1,ny));
@@ -49,14 +50,14 @@ function getrs(nx,ny,nprefix)
 %     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 4 4])
 %     print( gcf, '-dpng', [nprefix 'Vort'])
 %     
-%     %% Fig 3
-%     figure(3)
-%     quiver(xxg,yyg,u',v')
-%     grid on
-%     axis equal
-%     set(gcf, 'PaperPositionMode', 'manual');
-%     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 4 4])
-%     print( gcf, '-dpng', [nprefix 'Quiv'])
+    %% Fig 3
+    figure(3)
+    quiver(xxg,yyg,u',v',2)
+    grid on
+    axis equal
+    set(gcf, 'PaperPositionMode', 'manual');
+    set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 4 4])
+    print( gcf, '-dpng', [nprefix 'Quiv'])
 %  
 %     
 %     umax = max(u(ceil(end/2),:));
@@ -96,20 +97,26 @@ function getrs(nx,ny,nprefix)
     ylabel('Y');
     axis equal
     grid on
-    axis([0.2 0.8 0.5 1])
+%     axis([0.2 0.8 0.5 1])
     set(gcf, 'PaperPositionMode', 'manual');
     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
     print( gcf, '-dpng', [nprefix 'Cont'])
     
-    figure(7)
-    [c,h] = contour(xxg,yyg,G1',[-1:.025:.5],'k');
-    clabel(c,h,'FontSize',7,'LabelSpacing',200)
-    xlabel('X');
-    ylabel('Y');
-    set(gcf, 'PaperPositionMode', 'manual');
-    set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
-    print( gcf, '-dpng', [nprefix 'DCont'])
+%     figure(7)
+%     [c,h] = contour(xxg,yyg,G1',[-1:.025:.5],'k');
+%     clabel(c,h,'FontSize',7,'LabelSpacing',200)
+%     xlabel('X');
+%     ylabel('Y');
+%     set(gcf, 'PaperPositionMode', 'manual');
+%     set(gcf,'PaperUnits','inches','PaperPositionMode','manual','PaperPosition',[0 0 6 4])
+%     print( gcf, '-dpng', [nprefix 'DCont'])
+
+figure(9)
+surf(xxg,yyg,G')
+
+figure(10)
+[c,h] = contour(xxg,yyg,G',[0 0],'k'
     
-%     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW2/
+%     ! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW3/
 
 

@@ -68,6 +68,9 @@ void apply_projection(double** restrict phi, double** restrict u, double** restr
 /* Write 2D Matrix to File */
 void write_matrix_2d(double** mat, int nx, int ny, char* filename);
 
+/* Write 2D Matrix to File */
+void write_matrix_2d_int(int** mat, int nx, int ny, char* filename);
+
 /*Init Settings*/
 struct slv_settings init_settings();
 
@@ -75,6 +78,8 @@ struct slv_settings init_settings();
 double slv_psi_weno(double a, double b, double c, double d);
 
 void print_array(double* X, int n);
+
+void print_array_int(int* X, int n);
 
 
 #endif /* SLV_H_ */
