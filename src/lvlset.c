@@ -174,7 +174,7 @@ double dist_from_zalesak(double x,double y,double xc,double yc, double R, double
 
 		double dist2notch = dist_from_notch(x, y, xn0, yn0, xn1, yn1, xn2, yn2, xn3, yn3);
 		double dist2arc = dist_from_arc(x,y,xc,yc,R,t0,t1);
-		if (dist2notch < 0.0){
+		if (dist2notch < 0.0 && dist2arc > cwidth/4.0){
 			return dist2notch;
 		} else {
 			return fmin(dist2notch,dist2arc);
@@ -233,6 +233,58 @@ void init_uv_test_static(double** u, double** v, int nx, int ny, int nghost, dou
 			}
 			if( j!= ny+nghost){
 				v[i+nghost][j+nghost] = 0.0;
+			}
+		}
+	}
+}
+void init_uv_test_left(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
+	for (int i = -nghost; i<nx+nghost+1; i++){
+		for (int j = -nghost; j<ny+nghost+1; j++){
+			if(i != nx+nghost){
+				u[i+nghost][j+nghost] = -0.1;
+				//printf("u(%i, %i) = %7.7f\n",i+nghost,j+nghost,u[i+nghost][j+nghost]);
+			}
+			if( j!= ny+nghost){
+				v[i+nghost][j+nghost] = 0.0;
+			}
+		}
+	}
+}
+void init_uv_test_right(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
+	for (int i = -nghost; i<nx+nghost+1; i++){
+		for (int j = -nghost; j<ny+nghost+1; j++){
+			if(i != nx+nghost){
+				u[i+nghost][j+nghost] = +0.1;
+				//printf("u(%i, %i) = %7.7f\n",i+nghost,j+nghost,u[i+nghost][j+nghost]);
+			}
+			if( j!= ny+nghost){
+				v[i+nghost][j+nghost] = 0.0;
+			}
+		}
+	}
+}
+void init_uv_test_up(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
+	for (int i = -nghost; i<nx+nghost+1; i++){
+		for (int j = -nghost; j<ny+nghost+1; j++){
+			if(i != nx+nghost){
+				u[i+nghost][j+nghost] = +0.0;
+				//printf("u(%i, %i) = %7.7f\n",i+nghost,j+nghost,u[i+nghost][j+nghost]);
+			}
+			if( j!= ny+nghost){
+				v[i+nghost][j+nghost] = +0.1;
+			}
+		}
+	}
+}
+void init_uv_test_down(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
+	for (int i = -nghost; i<nx+nghost+1; i++){
+		for (int j = -nghost; j<ny+nghost+1; j++){
+			if(i != nx+nghost){
+				u[i+nghost][j+nghost] = +0.0;
+				//printf("u(%i, %i) = %7.7f\n",i+nghost,j+nghost,u[i+nghost][j+nghost]);
+			}
+			if( j!= ny+nghost){
+				v[i+nghost][j+nghost] = -0.1;
 			}
 		}
 	}
@@ -484,12 +536,14 @@ double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** r
 	return (err/((double)count));
 }
 
-void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers, double* restrict FMM, int* restrict FMMi, int* restrict FMMj, double dx, double dy, double dt, int nx, int ny, int nghost){
+void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers,int** restrict MarkPoint, double* restrict FMM, int* restrict FMMi, int* restrict FMMj, double dx, double dy, double dt, int nx, int ny, int nghost){
 	int nAccept = 0;
 	int nClose = 0;
 	int nFar = 0;
 	int nTot = (nx+2*nghost-1)*(ny+2*nghost-1);
+#ifdef DBGFMM
 	printf("\n nAccept = %i, \t nClose = %i, \t nTot = %i, \t\n ", nAccept, nClose,nTot);
+#endif
 	double* Close;
 	int* Closei;
 	int* Closej;
@@ -497,7 +551,6 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 	int* Fari;
 	int* Farj;
 	double Large = 1000000.0;//Million
-	printf("Marker 1 \n");
 	//Find Accepted
 	for (int i = -nghost; i < nx+nghost-1; i++){
 		for(int j = -nghost; j < ny+nghost-1; j++){
@@ -507,9 +560,9 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 					if((G[i+nghost+1][j+nghost] < 0.0) || (G[i+nghost-1][j+nghost] < 0.0) ||
 							(G[i+nghost][j+nghost+1] < 0.0) || (G[i+nghost][j+nghost-1] < 0.0)){
 						Markers[i+nghost][j+nghost]  = +1;
-						FMM[nAccept] = G[i+nghost][j+nghost];
-						FMMi[nAccept] = i;
-						FMMj[nAccept] = j;
+						//FMM[nAccept] = G[i+nghost][j+nghost];
+						//FMMi[nAccept] = i;
+						//FMMj[nAccept] = j;
 						nAccept++;
 					}
 				} else { //Negative
@@ -517,9 +570,9 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 					if((G[i+nghost+1][j+nghost] > 0.0) || (G[i+nghost-1][j+nghost] > 0.0) ||
 							(G[i+nghost][j+nghost+1] > 0.0) || (G[i+nghost][j+nghost-1] > 0.0)){
 						Markers[i+nghost][j+nghost]  = -1;
-						FMM[nAccept] = -G[i+nghost][j+nghost];
-						FMMi[nAccept] = i;
-						FMMj[nAccept] = j;
+						//FMM[nAccept] = -G[i+nghost][j+nghost];
+						//FMMi[nAccept] = i;
+						//FMMj[nAccept] = j;
 						nAccept++;
 					}
 				}
@@ -532,7 +585,6 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 			}
 		}
 	}
-	printf("Marker 2 \n");
 	//Find Close and Far
 	for (int i = 0; i < nx; i++){
 		for(int j = 0; j < ny; j++){
@@ -541,15 +593,16 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 				if(((Markers[i+nghost+1][j+nghost] == 1) || (Markers[i+nghost-1][j+nghost] == 1) ||
 						(Markers[i+nghost][j+nghost+1] == 1) || (Markers[i+nghost][j+nghost-1] == 1))){
 					Markers[i+nghost][j+nghost]  = +2;
-					FMM[nAccept+nClose] = G[i+nghost][j+nghost];
-					FMMi[nAccept+nClose] = i;
-					FMMj[nAccept+nClose] = j;
+					MarkPoint[i+nghost][j+nghost]=nClose;
+					FMM[nClose] = G[i+nghost][j+nghost];
+					FMMi[nClose] = i;
+					FMMj[nClose] = j;
 					nClose++;
 				} else {//point is far
 					Markers[i+nghost][j+nghost]  = +3;
-					FMM[nTot-1-nFar] = Large;
-					FMMi[nTot-1-nFar] = i;
-					FMMj[nTot-1-nFar] = j;
+					//FMM[nTot-1-nFar] = Large;
+					//FMMi[nTot-1-nFar] = i;
+					//FMMj[nTot-1-nFar] = j;
 					nFar++;
 				}
 			} else if(Markers[i+nghost][j+nghost] != 1 && Markers[i+nghost][j+nghost] != -1) { //Negative
@@ -557,89 +610,107 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 				if(((Markers[i+nghost+1][j+nghost] == -1) || (Markers[i+nghost-1][j+nghost] == -1) ||
 						(Markers[i+nghost][j+nghost+1] == -1) || (Markers[i+nghost][j+nghost-1] == -1))){
 					Markers[i+nghost][j+nghost]  = -2;
-					FMM[nAccept+nClose] = -G[i+nghost][j+nghost];
-					FMMi[nAccept+nClose] = i;
-					FMMj[nAccept+nClose] = j;
+					MarkPoint[i+nghost][j+nghost]=nClose;
+					FMM[nClose] = -G[i+nghost][j+nghost];
+					FMMi[nClose] = i;
+					FMMj[nClose] = j;
 					nClose++;
 				} else {//point is far
 					Markers[i+nghost][j+nghost]  = -3;
-					FMM[nTot-1-nFar] = Large;
-					FMMi[nTot-1-nFar] = i;
-					FMMj[nTot-1-nFar] = j;
+					//FMM[nTot-1-nFar] = Large;
+					//FMMi[nTot-1-nFar] = i;
+					//FMMj[nTot-1-nFar] = j;
 					nFar++;
 				}
 			}
 		}
 	}
-	printf("Marker 3 \n");
-	Close = &FMM[nAccept-1];
-	Closei = &FMMi[nAccept-1];
-	Closej = &FMMj[nAccept-1];
-
-	Far = &FMM[nTot-1-nFar];
-	Fari = &FMMi[nTot-1-nFar];
-	Farj = &FMMj[nTot-1-nFar];
-
-	printf("Marker 4 \n");
-	printf("\n nAccept = %i, \t nClose = %i, \t nFar = %i, \t nTot = %i, \t Close-FMM %i \t\n ", nAccept, nClose,nFar,nTot,Close-FMM);
-	print_array(FMM, nTot);
+	Close = FMM;
+	Closei = FMMi;
+	Closej = FMMj;
+#ifdef DBGFMM
+	printf("\n nAccept = %i, \t nClose = %i, \t nFar = %i, \t nTot = %i, \t\n ", nAccept, nClose,nFar,nTot);
+	print_array(FMM, nClose);
+#endif
+	heapsort(Close,Closei,Closej,MarkPoint,nClose,nghost);
+#ifdef DBGFMM
 	print_array(Close, nClose);
-	printf("Marker 5 \n");
-	heapsort(Close,Closei,Closej,nClose);
-	printf("Marker 6 \n");
-	print_array(Close, nClose);
-	//print_array_int(FMMi, nTot);
-	//print_array_int(FMMj, nTot);
+	print_array_int(Closei, nClose);
+	print_array_int(Closej, nClose);
+#endif
 
 	int i,j;
 	double alpha,beta,a,b,A,B,C,Gtemp;
 	int count = 0;
+#ifdef DBGFMM
 	write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.0");
-
+#endif
 	while (nClose > 0){
+		//Pick Closest Point
 		i = Closei[0];
 		j = Closej[0];
 		Markers[i+nghost][j+nghost] = (Markers[i+nghost][j+nghost] > 0) ? 1 : -1;
+#ifdef DBGFMM
 		printf("i,j = %i,%i\n",i,j);
+#endif
 		nAccept++;
 		nClose--;
-		Close++;// = &Close[1];
-		Closei++;// = &Closei[1];
-		Closej++;// = &Closej[1];
+
+		//Bring last point to head
+		Close[0]  = Close[nClose];
+		Closei[0]  = Closei[nClose];
+		Closej[0]  = Closej[nClose];
+		MarkPoint[Closei[0]+nghost][Closej[0]+nghost] = 0;
+		//Close++;// = &Close[1];
+		//Closei++;// = &Closei[1];
+		//Closej++;// = &Closej[1];
 
 
 		//Fix +-i
 		if(i<(nx-1)){
-			if(Markers[i+nghost+1][j+nghost] != 1 && Markers[i+nghost+1][j] != -1){
-				nClose = G_from_flux(i+1, j, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+			if(Markers[i+nghost+1][j+nghost] != 1 && Markers[i+nghost+1][j+nghost] != -1){
+				nClose = G_from_flux(i+1, j, G, Markers,MarkPoint,Close,Closei,Closej,nClose, nghost, dx, dy);
+#ifdef DBGFMM
 				printf("Added i+ %f\n",G[i+nghost+1][j+nghost]);
+#endif
 			}
 		}
 		if(i>1){
 			if(Markers[i+nghost-1][j+nghost] != 1 && Markers[i+nghost-1][j+nghost] != -1){
-				nClose = G_from_flux(i-1, j, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+				nClose = G_from_flux(i-1, j, G, Markers,MarkPoint,Close,Closei,Closej,nClose, nghost, dx, dy);
+#ifdef DBGFMM
 				printf("Added i- = %f \n",G[i+nghost-1][j+nghost]);
+#endif
 			}
 		}
 		//Fix +-j
 		if(j < (ny-1)){
 			if(Markers[i+nghost][j+nghost+1] != 1 && Markers[i+nghost][j+nghost+1] != -1){
-				nClose = G_from_flux(i, j+1, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+				nClose = G_from_flux(i, j+1, G, Markers,MarkPoint,Close,Closei,Closej,nClose, nghost, dx, dy);
+#ifdef DBGFMM
 				printf("Added j+ = %f \n",G[i+nghost][j+nghost+1]);
+#endif
 			}
 		}
 		if(j > 1){
 			if(Markers[i+nghost][j+nghost-1] != 1 && Markers[i+nghost][j+nghost-1] != -1){
-				nClose = G_from_flux(i, j-1, G, Markers,Close,Closei,Closej,nClose, nghost, dx, dy);
+				nClose = G_from_flux(i, j-1, G, Markers,MarkPoint,Close,Closei,Closej,nClose, nghost, dx, dy);
+#ifdef DBGFMM
 				printf("Added j- = %f\n",G[i+nghost][j+nghost-1]);
+#endif
 			}
 		}
+#ifdef DBGFMM
 		print_array(Close, nClose);
-		heapsort(Close,Closei,Closej,nClose);//Resort
+#endif
+		heapsort(Close,Closei,Closej,MarkPoint,nClose,nghost);//Resort
+#ifdef DBGFMM
 		print_array(Close, nClose);
 		print_array_int(Closei, nClose);
 		print_array_int(Closej, nClose);
+#endif
 		count++;
+#ifdef DBGFMM
 		if (count == 1){
 			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.1");
 		}
@@ -659,7 +730,7 @@ void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers
 			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.100");
 		}
 		printf("*** Count = %i, nAccept = %i, nClose = %i \n\n",count,nAccept, nClose);
-
+#endif
 	}
 
 }
@@ -672,7 +743,25 @@ double lvl_H (double fx, double a){
 	} else if (fx <= -a) {
 		return 0.0;
 	} else {
-		return 1.0/2.0*(fx/a+1/M_PI*sin(M_PI*fx/a))+0.5;
+		return (0.5*(fx/a+1.0/M_PI*sin(M_PI*fx/a))+0.5);
+	}
+}
+
+double alpha_H (double fx, double a){
+	//double ret;
+	//printf("fx = %f, a = %f ",fx,a);
+	if(fx >= a){
+		//printf("case1\n");
+		return 1.0;
+		//ret = 1.0;
+	} else if (fx <= -a) {
+		//printf("case2\n");
+		return 0.0;
+		//ret = 0.0;
+	} else {
+		//printf("case3\n");
+		return (0.5*(fx/a+1.0/M_PI*sin(M_PI*fx/a))+0.5);
+		//ret = 0.5*(fx/a+1.0/M_PI*sin(M_PI*fx/a))+0.5;
 	}
 }
 

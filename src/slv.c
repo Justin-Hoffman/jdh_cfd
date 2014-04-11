@@ -125,8 +125,14 @@ int main(int argc, char** argv)
 	double** dGdyp = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** dGdym = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 
+	double** alpha = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** d = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	V2D**  marr   = malloc((nx+2*nghost-1)*sizeof(V2D*));memcntr += (nx+2*nghost-1)*sizeof(V2D*);
+	lseg**  segs   = malloc((nx+2*nghost-1)*sizeof(lseg*));memcntr += (nx+2*nghost-1)*sizeof(lseg*);
+
 	double* FMM = malloc((nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(double)); memcntr += (nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(double);
 	int** Markers = malloc((nx+2*nghost-1)*sizeof(int*));memcntr += (nx+2*nghost-1)*sizeof(int*);
+	int** MarkPoint = malloc((nx+2*nghost-1)*sizeof(int*));memcntr += (nx+2*nghost-1)*sizeof(int*);
 	int* FMMi = malloc((nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int)); memcntr += (nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int);
 	int* FMMj = malloc((nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int)); memcntr += (nx+2*nghost-1)*(ny+2*nghost-1)*sizeof(int);
 
@@ -174,6 +180,12 @@ int main(int argc, char** argv)
 		dGdyp[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		dGdym[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
 		Markers[i+nghost] = malloc((ny+2*nghost-1)*sizeof(int));memcntr += (ny+2*nghost-1)*sizeof(int);
+		MarkPoint[i+nghost] = malloc((ny+2*nghost-1)*sizeof(int));memcntr += (ny+2*nghost-1)*sizeof(int);
+
+		alpha[i+nghost] = malloc((nx+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		d[i+nghost] = malloc((nx+2*nghost-1)*sizeof(double));memcntr += (nx+2*nghost-1)*sizeof(double);
+		marr[i+nghost] = malloc((nx+2*nghost-1)*sizeof(V2D));memcntr += (nx+2*nghost-1)*sizeof(V2D);
+		segs[i+nghost] = malloc((nx+2*nghost-1)*sizeof(lseg));memcntr += (nx+2*nghost-1)*sizeof(lseg);
 	}
 #ifdef DBGMEM
 	printf("\t Malloc Normal Arrays\n");
@@ -257,8 +269,10 @@ int main(int argc, char** argv)
 #endif DEBUG
 	set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 	//init_uv_test(u, v, nx, ny, nghost, dx, dy);
-
-	//init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,0.0);
+	get_alpha(G, alpha,  nghost, dx, dy, nx,  ny);
+	set_all_bcs_neumann(alpha,dx,dy,nx,ny,nghost,nghost);
+	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,0.0);
+	//init_uv_test_down(u, v, nx, ny, nghost, dx, dy);
 
 	double min = 0.00001;
 	/* Time Iteration Loop */
@@ -302,12 +316,15 @@ int main(int argc, char** argv)
 #ifdef DEBUG
 		printf("\t Advecting G \n");
 #endif
-		reinit_FMM(G,G0,Markers,FMM,FMMi,FMMj, dx, dy, dt, nx, ny,nghost);
+		init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time);
+		vof_get_fluxes(u,v,alpha,d,marr,dt,nghost, dx, dy, nx, ny);
+		//levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,time,nx,ny,nghost);
+		//set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+
 		/*
-		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,time,nx,ny,nghost);
-		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 		if((t+1)%ninit == 0){
 			copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
+
 			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
 			int ind = 1;
 			while(reinitl2 > dt*dx && ind < 150){
@@ -315,8 +332,13 @@ int main(int argc, char** argv)
 				ind++;
 			}
 			//printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
-			set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
-		}
+			//reinit_FMM(G,G0,Markers, MarkPoint,FMM,FMMi,FMMj, dx, dy, dt, nx, ny,nghost);
+			//set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+			//printf("Ran FMM\n");
+		}*/
+
+		//get_alpha(G, alpha,  nghost, dx, dy, nx, ny);
+		vof_get_surfaces(alpha,d,marr,segs,nghost,dx,dy,nx,ny);
 
 		if( ((t+1)%nsave) == 0) {
 			char fname[50];
@@ -337,14 +359,23 @@ int main(int argc, char** argv)
 
 			//Zalesak Disk Volumes
 			double a = 0.005;
+			//init_zalesak(G1, nx, ny, nghost, dx, dy);
 			init_circle(G1, nx, ny, nghost, dx, dy);
 			double vol =  get_vol(G, a, nx, ny, nghost,dx,dy);
+			vol = get_alpha_sum(alpha,nghost,dx,dy,nx,ny);
+
+
 			double vol_act =  get_vol(G1, a, nx, ny, nghost,dx,dy);
+			get_alpha(G1, G2,  nghost, dx, dy, nx,  ny);
+			vol_act =  get_alpha_sum(G2,nghost,dx,dy,nx,ny);
+
 			double shp_err = get_shape_err(G, G1, vol_act, a, nx, ny, nghost, dx, dy);
-			printf("\t volume 1 rot = %7.7E \n", vol);
-			printf("\t volume true = %7.7E \n", vol_act);
-			printf("\t volume error = %7.7E \n", fabs(vol-vol_act));
-			printf("\t shape error = %7.7E \n", shp_err);
+			shp_err = get_alpha_diff(alpha, G2,nghost, dx,dy, nx, ny);
+
+			printf("\t volume 1 rot = %16.16E \n", vol);
+			printf("\t volume true = %16.16E \n", vol_act);
+			printf("\t volume error = %16.16E \n", fabs(vol-vol_act));
+			printf("\t shape error = %16.16E \n", shp_err);
 
 			write_matrix_2d(usv, nx+2*nghost-1, ny+2*nghost-1, "u.dat");
 			write_matrix_2d(vsv, nx+2*nghost-1, ny+2*nghost-1, "v.dat");
@@ -352,13 +383,21 @@ int main(int argc, char** argv)
 			write_matrix_2d(v,nx+2*nghost+1,ny+2*nghost,"vraw.dat");
 			write_matrix_2d(us,nx,ny+1,"us.dat");
 			write_matrix_2d(vs,nx+1,ny,"vs.dat");
+
 			write_matrix_2d(omega, nx, ny, "omega.dat");
 			write_matrix_2d(phi,nx+1,ny+1,"phi.dat");
 			write_matrix_2d(strm,nx+2,ny+2,"stream.dat");
+
 			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1,"G.dat");
 			write_matrix_2d(G1,nx+2*nghost-1,ny+2*nghost-1,"G1.dat");
 			write_matrix_2d(dGdt,nx+2*nghost-1,ny+2*nghost-1,"dGdt.dat");
+
+			write_matrix_2d(alpha,nx+2*nghost-1,ny+2*nghost-1,"alpha.dat");
+			write_matrix_2d(d,nx+2*nghost-1,ny+2*nghost-1,"d.dat");
+			write_matrix_2d_lseg(segs, nx+2*nghost-1,ny+2*nghost-1, "lsegs.dat");
+
 			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.dat");
+
 		}
 	} 
 	
@@ -1102,6 +1141,16 @@ void write_matrix_2d_int(int** mat, int nx, int ny, char* filename)
 	size_t count;
 	for (int i = 0; i<nx; i++){
 		count = fwrite(mat[i],sizeof(int),ny,file);
+	}
+}
+
+/* Write 2D Matrix to File */
+void write_matrix_2d_lseg(lseg** segs, int nx, int ny, char* filename)
+{
+	FILE *file = fopen(filename,"w");
+	size_t count;
+	for (int i = 0; i<nx; i++){
+		count = fwrite(segs[i],sizeof(lseg),ny,file);
 	}
 }
 
