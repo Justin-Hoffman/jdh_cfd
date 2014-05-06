@@ -148,11 +148,11 @@ int G_from_flux(int i, int j, double** G, int** Markers, int** MarkPoint, double
 }
 
 void get_alpha(double** G, double** alpha,  int nghost, double dx, double dy,int nx, int ny){
-	double a = (dx+dy)/3.0;
+	double a = (dx+dy)*1.5;
 
 #pragma omp parallel for
-	for(int i = 0; i<nx; i++){
-		for(int j = 0; j<ny; j++){
+	for(int i = -nghost; i<nx+nghost-1; i++){
+		for(int j = -nghost; j<ny+nghost-1; j++){
 			alpha[i+nghost][j+nghost] = alpha_H(G[i+nghost][j+nghost], a);
 		}
 	}
@@ -226,6 +226,7 @@ Wall cycle_wall(Wall w){
 void vof_get_surfaces(double** alpha,double** darr, V2D** marr,lseg** segs, int nghost, double dx, double dy,int nx, int ny){
 	for(int i = 0; i<nx; i++){
 		for(int j = 0; j<ny; j++){
+			vof_get_surface(alpha,darr,marr,segs,i,j,nghost,dx,dy);
 			vof_get_surface(alpha,darr,marr,segs,i,j,nghost,dx,dy);
 		}
 	}
@@ -451,75 +452,140 @@ void vof_get_surface(double** alpha, double** darr, V2D** marr, lseg** segs, int
 	darr[i+nghost][j+nghost] = d;
 
 }
-void vof_get_fluxes(double** u, double** v, double** alpha,double** darr, V2D** marr, double dt, int nghost, double dx, double dy, int nx, int ny){
+void vof_get_fluxes(double** u, double** v, double** alpha,double** darr, V2D** marr, double dt, int nghost, double dx, double dy, int nx, int ny,int t){
 	double dalpha,d,dp,uf,vf,a;
 	double hx,hy;
 	V2D m;
 	// flux u
-	hy = dy;
-	vof_construct_ds(alpha,darr,marr,nghost, dx, dy, nx, ny);
-	for(int i = 0; i<nx; i++){
-		for(int j = 0; j<ny; j++){
-			uf = u[i+nghost][j+nghost];
-			hx = fabs(uf*dt);
-			if(uf > 0){
-				d = darr[i+nghost-1][j+nghost];
-				m = marr[i+nghost-1][j+nghost];
-			} else {
-				d = darr[i+nghost][j+nghost];
-				m = marr[i+nghost][j+nghost];
-			}
-			if (uf*m.x > 0){
-				dp = fmax(0.0,d-fabs(m.x)*(dx-hx));
-			} else {
-				dp = d;
-			}
-			dalpha = vof_alpha_from_surf(dp,m,hx,hy);
-			//printf("dalpha = %f,d = %f, dp = %f, uf = %f, dt = %f, m = %f,%f hx = %f, hy = %f     -------   %f\n",dalpha,d,dp,uf,dt,m.x,m.y,hx,hy,dalpha*hx*hy/(dx*dy));
-			dalpha = dalpha*hx*hy/(dx*dy);
-			if(uf > 0) {
-				//dalpha = fmin(dalpha*hx*hy/(dx*dy),alpha[i+nghost-1][j+nghost]);
-				alpha[i+nghost-1][j+nghost] = alpha[i+nghost-1][j+nghost]-dalpha;
-				alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]+dalpha;
-			} else if (uf < 0){
-				//dalpha = fmin(dalpha*hx*hy/(dx*dy),alpha[i+nghost][j+nghost]);
-				alpha[i+nghost-1][j+nghost] = alpha[i+nghost-1][j+nghost]+dalpha;
-				alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]-dalpha;
-			}
-		}
-	}
-	vof_construct_ds(alpha,darr, marr,nghost, dx, dy, nx, ny);
-
-	// flux v
-	hx = dx;
-	for(int i = 0; i<nx; i++){
-		for(int j = 0; j<ny; j++){
-			vf = v[i+nghost][j+nghost];
-			hy = fabs(vf*dt);
-			if(vf > 0){
-				d = darr[i+nghost][j+nghost-1];
-				m = marr[i+nghost][j+nghost-1];
-			} else {
-				d = darr[i+nghost][j+nghost];
-				m = marr[i+nghost][j+nghost];
-			}
-			if (vf*m.y > 0){
-				dp = fmax(0.0,d-fabs(m.y)*(dy-hy));
-			} else {
-				dp = d;
-			}
-			dalpha = vof_alpha_from_surf(fmax(dp,0.0),m,hx,hy);
-			dalpha = dalpha*hx*hy/(dx*dy);
-			if(vf > 0) {
-				alpha[i+nghost][j+nghost-1] = alpha[i+nghost][j+nghost-1]-dalpha;
-				alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]+dalpha;
-			} else if(vf < 0) {
-				alpha[i+nghost][j+nghost-1] = alpha[i+nghost][j+nghost-1]+dalpha;
-				alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]-dalpha;
+	if(t%1 == 0){
+		hy = dy;
+		vof_construct_ds(alpha,darr,marr,nghost, dx, dy, nx, ny);
+		for(int i = 0; i<nx; i++){
+			for(int j = 0; j<ny; j++){
+				uf = u[i+nghost][j+nghost];
+				hx = fabs(uf*dt);
+				if(uf > 0){
+					d = darr[i+nghost-1][j+nghost];
+					m = marr[i+nghost-1][j+nghost];
+				} else {
+					d = darr[i+nghost][j+nghost];
+					m = marr[i+nghost][j+nghost];
+				}
+				if (uf*m.x > 0){
+					dp = fmax(0.0,d-fabs(m.x)*(dx-hx));
+				} else {
+					dp = d;
+				}
+				dalpha = vof_alpha_from_surf(dp,m,hx,hy);
+				//printf("dalpha = %f,d = %f, dp = %f, uf = %f, dt = %f, m = %f,%f hx = %f, hy = %f     -------   %f\n",dalpha,d,dp,uf,dt,m.x,m.y,hx,hy,dalpha*hx*hy/(dx*dy));
+				dalpha = dalpha*hx*hy/(dx*dy);
+				if(uf > 0) {
+					//dalpha = fmin(dalpha*hx*hy/(dx*dy),alpha[i+nghost-1][j+nghost]);
+					alpha[i+nghost-1][j+nghost] = alpha[i+nghost-1][j+nghost]-dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]+dalpha;
+				} else if (uf < 0){
+					//dalpha = fmin(dalpha*hx*hy/(dx*dy),alpha[i+nghost][j+nghost]);
+					alpha[i+nghost-1][j+nghost] = alpha[i+nghost-1][j+nghost]+dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]-dalpha;
+				}
 			}
 		}
+		vof_construct_ds(alpha,darr, marr,nghost, dx, dy, nx, ny);
+		// flux v
+		hx = dx;
+		for(int i = 0; i<nx; i++){
+			for(int j = 0; j<ny; j++){
+				vf = v[i+nghost][j+nghost];
+				hy = fabs(vf*dt);
+				if(vf > 0){
+					d = darr[i+nghost][j+nghost-1];
+					m = marr[i+nghost][j+nghost-1];
+				} else {
+					d = darr[i+nghost][j+nghost];
+					m = marr[i+nghost][j+nghost];
+				}
+				if (vf*m.y > 0){
+					dp = fmax(0.0,d-fabs(m.y)*(dy-hy));
+				} else {
+					dp = d;
+				}
+				dalpha = vof_alpha_from_surf(fmax(dp,0.0),m,hx,hy);
+				dalpha = dalpha*hx*hy/(dx*dy);
+				if(vf > 0) {
+					alpha[i+nghost][j+nghost-1] = alpha[i+nghost][j+nghost-1]-dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]+dalpha;
+				} else if(vf < 0) {
+					alpha[i+nghost][j+nghost-1] = alpha[i+nghost][j+nghost-1]+dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]-dalpha;
+				}
+			}
+		}
+		vof_construct_ds(alpha,darr, marr,nghost, dx, dy, nx, ny);
+	} else {
+		// flux v
+		hx = dx;
+		for(int i = 0; i<nx; i++){
+			for(int j = 0; j<ny; j++){
+				vf = v[i+nghost][j+nghost];
+				hy = fabs(vf*dt);
+				if(vf > 0){
+					d = darr[i+nghost][j+nghost-1];
+					m = marr[i+nghost][j+nghost-1];
+				} else {
+					d = darr[i+nghost][j+nghost];
+					m = marr[i+nghost][j+nghost];
+				}
+				if (vf*m.y > 0){
+					dp = fmax(0.0,d-fabs(m.y)*(dy-hy));
+				} else {
+					dp = d;
+				}
+				dalpha = vof_alpha_from_surf(fmax(dp,0.0),m,hx,hy);
+				dalpha = dalpha*hx*hy/(dx*dy);
+				if(vf > 0) {
+					alpha[i+nghost][j+nghost-1] = alpha[i+nghost][j+nghost-1]-dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]+dalpha;
+				} else if(vf < 0) {
+					alpha[i+nghost][j+nghost-1] = alpha[i+nghost][j+nghost-1]+dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]-dalpha;
+				}
+			}
+		}
+		vof_construct_ds(alpha,darr, marr,nghost, dx, dy, nx, ny);
+		hy = dy;
+		vof_construct_ds(alpha,darr,marr,nghost, dx, dy, nx, ny);
+		for(int i = 0; i<nx; i++){
+			for(int j = 0; j<ny; j++){
+				uf = u[i+nghost][j+nghost];
+				hx = fabs(uf*dt);
+				if(uf > 0){
+					d = darr[i+nghost-1][j+nghost];
+					m = marr[i+nghost-1][j+nghost];
+				} else {
+					d = darr[i+nghost][j+nghost];
+					m = marr[i+nghost][j+nghost];
+				}
+				if (uf*m.x > 0){
+					dp = fmax(0.0,d-fabs(m.x)*(dx-hx));
+				} else {
+					dp = d;
+				}
+				dalpha = vof_alpha_from_surf(dp,m,hx,hy);
+				//printf("dalpha = %f,d = %f, dp = %f, uf = %f, dt = %f, m = %f,%f hx = %f, hy = %f     -------   %f\n",dalpha,d,dp,uf,dt,m.x,m.y,hx,hy,dalpha*hx*hy/(dx*dy));
+				dalpha = dalpha*hx*hy/(dx*dy);
+				if(uf > 0) {
+					//dalpha = fmin(dalpha*hx*hy/(dx*dy),alpha[i+nghost-1][j+nghost]);
+					alpha[i+nghost-1][j+nghost] = alpha[i+nghost-1][j+nghost]-dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]+dalpha;
+				} else if (uf < 0){
+					//dalpha = fmin(dalpha*hx*hy/(dx*dy),alpha[i+nghost][j+nghost]);
+					alpha[i+nghost-1][j+nghost] = alpha[i+nghost-1][j+nghost]+dalpha;
+					alpha[i+nghost][j+nghost] = alpha[i+nghost][j+nghost]-dalpha;
+				}
+			}
+		}
+		vof_construct_ds(alpha,darr, marr,nghost, dx, dy, nx, ny);
 	}
-	vof_construct_ds(alpha,darr, marr,nghost, dx, dy, nx, ny);
 }
 
 

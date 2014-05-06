@@ -210,6 +210,38 @@ void init_circle(double** G, int nx, int ny, int nghost, double dx, double dy){
 		}
 	}
 }
+void init_RT(double** G, int nx, int ny, int nghost, double dx, double dy){
+#pragma omp parallel for
+	for (int i = -nghost; i<nx+nghost-1; i++){
+		for (int j = -nghost; j<ny+nghost-1; j++){
+				G[i+nghost][j+nghost] = j*dy+dy/2-2.0-0.05*cos(2*M_PI*(i*dx+dx/2.0));
+		}
+	}
+}
+void init_drop(double** G, int nx, int ny, int nghost, double dx, double dy){
+		double xc = 0.5;
+		double yc = 0.5;
+		double R = 0.15;
+		double x0 = 1.0;
+		double y0 = .05;
+		double x1 = 0.0;
+		double y1 = .05;
+#pragma omp parallel for
+	for (int i = -nghost; i<nx+nghost-1; i++){
+		for (int j = -nghost; j<ny+nghost-1; j++){
+				G[i+nghost][j+nghost] = fmax(dist_from_circ((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R),
+						y1-((j+nghost)*dy+dy/2.0f-nghost*dy) );
+		}
+	}
+}
+void init_allgas(double** G, int nx, int ny, int nghost, double dx, double dy){
+#pragma omp parallel for
+	for (int i = -nghost; i<nx+nghost-1; i++){
+		for (int j = -nghost; j<ny+nghost-1; j++){
+				G[i+nghost][j+nghost] = -999.999;
+		}
+	}
+}
 void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy){
 	for (int i = -nghost; i<nx+nghost+1; i++){
 		for (int j = -nghost; j<ny+nghost+1; j++){
@@ -457,9 +489,9 @@ void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** r
 		}
 	}
 }
-void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, double time, int nx, int ny, int nghost){
+void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, double time, int nx, int ny, int nghost, struct slv_settings st){
 	//Step1
-	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time);
+	//init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time);
 	levelset_diff(G,dGdt,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
 	#pragma omp parallel for
 	for(int i = 0; i<nx; i++){
@@ -467,9 +499,10 @@ void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** re
 			G1[i+nghost][j+nghost] = G[i+nghost][j+nghost]-dt*dGdt[i+nghost][j+nghost];
 		}
 	}
+	//set_all_BCS(G1,dx,dy,nx,ny,nghost,st);
 	set_all_bcs_neumann(G1,dx,dy,nx,ny,nghost,nghost);
 	//Step2
-	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time+1.0/4.0*dt);
+	//init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time+1.0/4.0*dt);
 	levelset_diff(G1,dGdt1,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
 	#pragma omp parallel for
 	for(int i = 0; i<nx; i++){
@@ -478,9 +511,10 @@ void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** re
 			                                               -1.0/4.0*dt*dGdt1[i+nghost][j+nghost];
 		}
 	}
+	//set_all_BCS(G2,dx,dy,nx,ny,nghost,st);
 	set_all_bcs_neumann(G2,dx,dy,nx,ny,nghost,nghost);
 	//Step3
-	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time+2.0/3.0*dt);
+	//init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time+2.0/3.0*dt);
 	levelset_diff(G2,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx,ny,nghost);
 	#pragma omp parallel for
 	for(int i = 0; i<nx; i++){
@@ -492,7 +526,7 @@ void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** re
 	}
 }
 
-double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, double dt, int nx, int ny, int nghost){
+double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, double dt, int nx, int ny, int nghost, struct slv_settings st){
 	//Step1
 	reinit_diff(G,G0,dGdt,dGdxp, dGdxm,dGdyp,dGdym, dx, dy, nx, ny, nghost);
 	#pragma omp parallel for
@@ -501,6 +535,7 @@ double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** r
 			G1[i+nghost][j+nghost] = G[i+nghost][j+nghost]-dt*dGdt[i+nghost][j+nghost];
 		}
 	}
+	//set_all_BCS(G1,dx,dy,nx,ny,nghost,st);
 	set_all_bcs_neumann(G1,dx,dy,nx,ny,nghost,nghost);
 	//Step2
 	//levelset_diff(G1,dGdt1,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx, ny,nghost);
@@ -512,6 +547,7 @@ double reinit_advect_TVDRK3(double** restrict G,double** restrict G0, double** r
 			                                               -1.0/4.0*dt*dGdt1[i+nghost][j+nghost];
 		}
 	}
+	//set_all_BCS(G2,dx,dy,nx,ny,nghost,st);
 	set_all_bcs_neumann(G2,dx,dy,nx,ny,nghost,nghost);
 	//Step3
 	//levelset_diff(G2,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,nx,ny,nghost);

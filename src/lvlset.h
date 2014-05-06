@@ -36,6 +36,12 @@
 
 	void init_circle(double** G, int nx, int ny, int nghost, double dx, double dy);
 
+	void init_RT(double** G, int nx, int ny, int nghost, double dx, double dy);
+
+	void init_drop(double** G, int nx, int ny, int nghost, double dx, double dy);
+
+	void init_allgas(double** G, int nx, int ny, int nghost, double dx, double dy);
+
 	void init_uv_test(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
 
 	void init_uv_test_left(double** u, double** v, int nx, int ny, int nghost, double dx, double dy);
@@ -53,11 +59,11 @@
 
 	void levelset_advect_euler(double** restrict G,double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt, int nx, int ny, int nghost);
 
-	void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt,double time, int nx, int ny, int nghost);
+	void levelset_advect_TVDRK3(double** restrict G,double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double** restrict u, double** restrict v, double dx, double dy, double dt,double time, int nx, int ny, int nghost,struct slv_settings st);
 
 	void reinit_diff(double** restrict G, double** restrict G0, double** restrict dGdt,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, int nx, int ny, int nghost);
 
-	double reinit_advect_TVDRK3(double** restrict G, double** restrict G0, double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, double dt, int nx, int ny, int nghost);
+	double reinit_advect_TVDRK3(double** restrict G, double** restrict G0, double** restrict G1,double** restrict G2,double** restrict dGdt,double** restrict dGdt1,double** restrict dGdt2,double** restrict dGdxp,double** restrict dGdxm,double** restrict dGdyp,double** restrict dGdym, double dx, double dy, double dt, int nx, int ny, int nghost, struct slv_settings st);
 
 	void reinit_FMM(double** restrict G,double** restrict G0, int** restrict Markers,int** restrict MarkPoint, double* restrict FMM, int* restrict FMMi, int* restrict FMMj, double dx, double dy, double dt, int nx, int ny, int nghost);
 

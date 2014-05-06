@@ -41,18 +41,33 @@ int main(int argc, char** argv)
 	int nsave = nt-1;
 	int saves = 0;
 	int memcntr = 0;
-	int ninit = 1;
+	int ninit = 100;
 	double Re = 100.0;
 	double dt = 0.001;
 	double time = 0.0;
+	double tend = 0.0001;
+	double maxv = 0.0;
 	struct slv_settings st;
 	st = init_settings();
-	st.YBC = WALL;
-	st.XBC = WALL;
-	st.XUV = 0.0;
+	st.Re = 100.0;
+	st.YBC = SLIPWALL;
+	st.XBC = PERIODIC;
+	st.XUV =0.0;
 	st.XLV = 0.0;
+	st.YLV = 0.0;
+	st.YRV = 0.0;
 	st.XConst = 0.0;
 	st.YConst = 0.0;
+	//st.rhol = 1.225;
+	st.rhol = 1.0;
+	//st.rhog = 0.1694;
+	st.rhog = 0.1;
+	//st.mul = 0.00313;
+	st.mul = 1.0;
+	//st.mug = 0.00313;
+	st.mug = .00181;
+	st.Reg = st.rhog/st.mug;
+	st.Rel = st.rhol/st.mul;
 
 	/*Heapsort Test
 	int Ni[6] = {0,1,2,3,4,5};
@@ -79,10 +94,10 @@ int main(int argc, char** argv)
 			nsave = atoi(argv[i+1]);
 			i++;
 		} else if (strcmp(argv[i],"-Re")==0){
-			Re = atof(argv[i+1]);
+			st.Re = atof(argv[i+1]);
 			i++;
-		} else if (strcmp(argv[i],"-dt")==0){
-			dt = atof(argv[i+1]);
+		} else if (strcmp(argv[i],"-tf")==0){
+			tend = atof(argv[i+1]);
 			i++;
 		} else if (strcmp(argv[i],"-XBC")==0){
 			dt = atof(argv[i+1]);
@@ -103,8 +118,10 @@ int main(int argc, char** argv)
 	printf("\n\tGrid size in X: %i\n",nx);
 	printf("\tGrid size in Y: %i\n",ny);
 	printf("\tReynolds Number: %f\n",Re);
-	printf("\tTime Step: %f\n",dt);
-	printf("\tTime Iterations: %i\n",nt);
+	printf("\tUnit Velocity Re Fluid: %f\n",st.rhol/st.mul);
+	printf("\tUnit Velocity Re Gas: %f\n",st.rhog/st.mug);
+	printf("\tTime Final: %f\n",tend);
+	printf("\tTime Iterations: %f\n", tend/dt);
 
 
 	/*Allocate Memory for Spacial Variables */
@@ -139,8 +156,10 @@ int main(int argc, char** argv)
 
 	double** omega = malloc(nx*sizeof(double*));memcntr += nx*sizeof(double*);
 
-	double** phi = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
-	double** phinext = malloc((nx+1)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
+	double* sysx = malloc((nx-1)*(ny-1)*sizeof(double));memcntr += (nx-1)*(ny-1)*sizeof(double*);
+
+	double** phi = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
+	double** phinext = malloc((nx+2*nghost-1)*sizeof(double*));memcntr += (nx+2*nghost-1)*sizeof(double*);
 	double** strm = malloc((nx+3)*sizeof(double*));memcntr += (nx+1)*sizeof(double*);
 	double** strmnext = malloc((nx+3)*sizeof(double*));memcntr += (nx+3)*sizeof(double*);
 	
@@ -206,8 +225,8 @@ int main(int argc, char** argv)
 			omega[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
 		}
 		if(i < (nx+nghost+2)){
-			phi[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
-			phinext[i+nghost] = malloc((ny+1+2*nghost)*sizeof(double));memcntr += (ny+1+2*nghost)*sizeof(double);
+			phi[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (ny+2*nghost-1)*sizeof(double);
+			phinext[i+nghost] = malloc((ny+2*nghost-1)*sizeof(double));memcntr += (ny+2*nghost-1)*sizeof(double);
 	
 			v[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
 			vs[i+nghost] = malloc((ny+2*nghost)*sizeof(double));memcntr += (ny+2*nghost)*sizeof(double);
@@ -262,83 +281,114 @@ int main(int argc, char** argv)
 #endif
 	printf("\n\t Initializing Zalesak's Disk into G \n");
 	//init_zalesak(G, nx, ny, nghost, dx, dy);
-	init_circle(G, nx, ny, nghost, dx, dy);
+	//init_circle(G, nx, ny, nghost, dx, dy);
+	//init_RT(G,nx,ny,nghost,dx,dy);
+	init_drop(G,nx,ny,nghost,dx,dy);
+	//init_allgas(G,nx,ny,nghost,dx,dy);
 	printf("\n\t Done Initializing!\n\n");
 #ifdef DEBUG
 	printf("\n\t Setting Neumann BC for G\n\n");
 #endif DEBUG
 	set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+	//set_all_BCS(G,dx,dy,nx,ny,nghost,st);
 	//init_uv_test(u, v, nx, ny, nghost, dx, dy);
 	get_alpha(G, alpha,  nghost, dx, dy, nx,  ny);
-	set_all_bcs_neumann(alpha,dx,dy,nx,ny,nghost,nghost);
-	init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,0.0);
+	//set_all_bcs_neumann(alpha,dx,dy,nx,ny,nghost,nghost);
+	//init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,0.0);
 	//init_uv_test_down(u, v, nx, ny, nghost, dx, dy);
+	init_uv_test_static(u, v, nx, ny, nghost, dx, dy);
 
-	double min = 0.00001;
+
+	double min = 0.0000000001;
+	int t = 0;
 	/* Time Iteration Loop */
-	for(int t = 0;t<nt;t++){
-		time = t*dt;
-		if(t > nt*9.0/10.0){
-			min = 0.00001;
+	//for(int t = 0;t<nt;t++){
+	while (tend >= time && fabs(tend-time) > 0.0000000001 ){//|| t > 1000){
+		if(t > 1){
+			min = 0.0000000001;
 		}
-		if(t%100==0){
+		if (t == 0){
+			dt = 0.00001;
+		}else {
+			dt = fmin(0.01,0.5/(2.0)*fmin(st.Reg,st.Rel)*fmin(dx*dx,dy*dy)); // Stability limit for FTCS
+			dt = fmin(dt, 0.25/(2.0*maxv)*fmin(dx,dy)); //Stability limit for Flux
+			//dt = fmin(0.01, 0.5/(2.0*maxv)*fmin(dx,dy)); //Stability limit for Flux
+		}
+		if((tend - time) < dt){
+			dt = tend-time;
+		}
+		printf("\t T = %9.9f, dt =  %9.9f \n",time, dt);
+		if(t%10==0){
 			printf("\t %i / %i \n",t,nt);
+			printf("\t Max Velocity is %f, CFL(Flux) =  %f, CFL(viscous) =  %f \n",maxv,2.0*maxv*dt/fmin(dx,dy),2.0*dt/(fmin(st.Reg,st.Rel)*fmin(dx*dx,dy*dy)));
+
 		}
 #ifdef DEBUG
-		printf("\t Simulation Loop. Time: %f / %f \n",(double)t*dt,dt*nt);
+		printf("\t Simulation Loop. Time: %9.9f / %9.9f \n",(double)t*dt,dt*nt);
 #endif
 
 		/* Set BCS */
 #ifdef DEBUG
 		printf("\t Setting BCS \n");
 #endif
-		//set_bcs(u, v, dx, dy, nx, ny, Re, st);
+		set_bcs(u, v, dx, dy, nx, ny,nghost, st);
 
 		/* Solv Viscous Bergers Equation */
 #ifdef DEBUG
 		printf("\t Solving Viscous Bergers \n");
 #endif
-		//slv_vbe(u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,Re,dt,st);
-
+		//slv_vbe(alpha,u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,nghost,dt,st);
+		//slv_vbe(alpha,u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,nghost,dt,st);
+		slv_vbeftcs(alpha,u,us,dus,duss,v,vs,dvs,dvss,hu,huold,hv,hvold,dx,dy,nx,ny,nghost,dt,st);
 		/* Calculate phi */	
 #ifdef DEBUG
 		printf("\t Solving Poisson Equation \n");
 #endif
-		//slv_pssn(phi,phinext,us,vs,dx,dy,nx,ny,dt,min);
+		//slv_pssn(phi,phinext,alpha,us,vs,dx,dy,nx,ny,nghost,dt,min,st);
+		slv_pssn_gmres(phi,sysx,alpha,us,vs,dx,dy,nx,ny,nghost,dt,min,st);
+		//write_matrix_2d(phi,nx+2*nghost-1,ny+2*nghost-1,"phi.dat");
+		//write_matrix_2d(us,nx,ny+1,"us.dat");
+		//write_matrix_2d(vs,nx+1,ny,"vs.dat");
 		//slv_pssn_gmres(phi,phinext,us,vs,dx,dy,nx,ny,dt,min,st);
 
 		/* Apply Projection */
 #ifdef DEBUG
 		printf("\t Applying Projection \n");
 #endif
-		//apply_projection(phi,u,us,v,vs,dx,dy,nx,ny,dt);
-
+		maxv = apply_projection(phi,alpha,u,us,v,vs,dx,dy,nx,ny,nghost,dt,st);
+		set_bcs(u, v, dx, dy, nx, ny,nghost, st);
+		//apply_projection(phi,alpha,u,us,v,vs,dx,dy,nx,ny,nghost,dt,st);
 #ifdef DEBUG
 		printf("\t Advecting G \n");
 #endif
-		init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time);
-		vof_get_fluxes(u,v,alpha,d,marr,dt,nghost, dx, dy, nx, ny);
-		//levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,time,nx,ny,nghost);
+		//init_uv_test_t3(u, v, nx, ny, nghost, dx, dy,time);
+		//vof_get_fluxes(u,v,alpha,d,marr,dt,nghost, dx, dy, nx, ny,t);
+		levelset_advect_TVDRK3(G,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,u,v,dx,dy,dt,time,nx,ny,nghost,st);
+		set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+		//set_all_BCS(G,dx,dy,nx,ny,nghost,st);
 		//set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+		get_alpha(G, alpha,  nghost, dx, dy, nx,  ny);
+		//set_all_bcs_neumann(alpha,dx,dy,nx,ny,nghost,nghost);
+		//set_all_BCS(alpha,dx,dy,nx,ny,nghost,st);
 
-		/*
 		if((t+1)%ninit == 0){
 			copy_2D(G0, G, nx+2*nghost-1, ny+2*nghost-1);
 
-			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
+			reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,fmin(dx,dy)/8.0,nx,ny,nghost,st);
 			int ind = 1;
-			while(reinitl2 > dt*dx && ind < 150){
-				reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,dx/4.0,nx,ny,nghost);
+			while(reinitl2 > dt*fmin(dx,dy)*fmin(dx,dy) && ind < 5){
+				reinitl2 = reinit_advect_TVDRK3(G,G0,G1,G2,dGdt,dGdt1,dGdt2,dGdxp,dGdxm,dGdyp,dGdym,dx,dy,fmin(dx,dy)/8.0,nx,ny,nghost,st);
+				set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 				ind++;
 			}
-			//printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
+			printf("Reinit converged at step %i:\t L2 err = %7.7E\n",ind, reinitl2);
 			//reinit_FMM(G,G0,Markers, MarkPoint,FMM,FMMi,FMMj, dx, dy, dt, nx, ny,nghost);
-			//set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
+			set_all_bcs_neumann(G,dx,dy,nx,ny,nghost,nghost);
 			//printf("Ran FMM\n");
-		}*/
+		}
 
 		//get_alpha(G, alpha,  nghost, dx, dy, nx, ny);
-		vof_get_surfaces(alpha,d,marr,segs,nghost,dx,dy,nx,ny);
+		//vof_get_surfaces(alpha,d,marr,segs,nghost,dx,dy,nx,ny);
 
 		if( ((t+1)%nsave) == 0) {
 			char fname[50];
@@ -349,8 +399,8 @@ int main(int argc, char** argv)
 		}
 
 		/* Repeat */
-		if (t==nt-1){
-			get_uv(u,v,usv,vsv,nx+nghost,ny+nghost);
+		if (time+dt == tend){
+			get_uv(u,v,usv,vsv,nx+2*nghost-1,ny+2*nghost-1);
 			printf("\t Getting Vorticity\n");
 			//get_vorticity(u,v,omega,dx,dy,nx,ny);
 			printf("\t Getting Stream Function\n");
@@ -381,11 +431,13 @@ int main(int argc, char** argv)
 			write_matrix_2d(vsv, nx+2*nghost-1, ny+2*nghost-1, "v.dat");
 			write_matrix_2d(u,nx+2*nghost,ny+2*nghost+1,"uraw.dat");
 			write_matrix_2d(v,nx+2*nghost+1,ny+2*nghost,"vraw.dat");
-			write_matrix_2d(us,nx,ny+1,"us.dat");
-			write_matrix_2d(vs,nx+1,ny,"vs.dat");
+			write_matrix_2d(us,nx+2*nghost,ny+2*nghost+1,"us.dat");
+			write_matrix_2d(vs,nx+2*nghost+1,ny+2*nghost,"vs.dat");
 
 			write_matrix_2d(omega, nx, ny, "omega.dat");
-			write_matrix_2d(phi,nx+1,ny+1,"phi.dat");
+			//write_matrix_2d(phi,nx+1,ny+1,"phi.dat");
+			write_matrix_2d(phi,nx+2*nghost-1,ny+2*nghost-1,"phi.dat");
+			write_matrix_2d(phinext,nx+2*nghost-1,ny+2*nghost-1,"phinext.dat");
 			write_matrix_2d(strm,nx+2,ny+2,"stream.dat");
 
 			write_matrix_2d(G,nx+2*nghost-1,ny+2*nghost-1,"G.dat");
@@ -399,6 +451,8 @@ int main(int argc, char** argv)
 			write_matrix_2d_int(Markers,nx+2*nghost-1,ny+2*nghost-1,"Markers.dat");
 
 		}
+		time = time+dt;
+	    t = t+1;
 	} 
 	
 	printf("***\tDONE!\t***\n");
@@ -406,7 +460,7 @@ int main(int argc, char** argv)
 }
 	
 /* Set Boundary Conditions */
-void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int  nx, int ny, double Re, struct slv_settings st)
+void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int  nx, int ny, int nghost, struct slv_settings st)
 {
 #ifdef DBGBCS
 		printf("\t Setting BCS \n");
@@ -422,21 +476,27 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 	#pragma omp parallel for
 	for(i = 0; i<nx; i++){ //Lower Wall
 		if(st.YBC == PERIODIC){
-			u[i][j]=u[i][ny-1];
-		} else {
-			u[i][j]=u[i][j+1]-2*(u[i][j+1]-st.XLV);
+			u[i+nghost][j+nghost-1]=u[i+nghost][ny-2+nghost]; // lower out of bounds is upper in bounds
+		} else if (st.YBC == SLIPWALL){
+			u[i+nghost][j+nghost-1]=u[i+nghost][j+nghost]; // lower out of bounds is lower in bounds
+		}else {
+			//u[i+nghost][j+nghost]=u[i+nghost][j+1+nghost]-2*(u[i+nghost][j+1+nghost]-st.XLV);
+			u[i+nghost][j+nghost-1]=-u[i+nghost][j+nghost]+2.0*st.XLV; //average of lowers is XLV
 		}
 	}
 #ifdef DBGBCS
 		printf("\t Setting U Upper BC \n");
 #endif
-	j = ny;
+	j = ny-1;
 	#pragma omp parallel for
 	for(i = 0; i<nx; i++){ //Upper Wall
 		if(st.YBC == PERIODIC){
-			u[i][j]=u[i][1];
+			u[i+nghost][j+nghost]=u[i+nghost][nghost];  //upper out of bounds is lower in bounds
+		} else if (st.YBC == SLIPWALL){
+			u[i+nghost][j+nghost]=u[i+nghost][j+nghost-1];  //upper out of bounds is upper in bounds
 		} else {
-			u[i][j]=u[i][j-1]-2*(u[i][j-1]-st.XUV);
+			//u[i+nghost][j+nghost]=u[i+nghost][j-1+nghost]-2*(u[i+nghost][j-1+nghost]-st.XUV);
+			u[i+nghost][j+nghost]=-u[i+nghost][j+nghost-1]+2.0*st.XUV; //average of uppers is XUV
 		}
 	}
 #ifdef DBGBCS
@@ -447,9 +507,12 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 	#pragma omp parallel for
 	for(j = 0; j<ny+1; j++){ //Left Wall
 		if(st.XBC == PERIODIC){
-			u[i][j]=(u[1][j]+u[nx-1][j])/2;
+			u[i+nghost][j+nghost]=(u[1+nghost][j+nghost]+u[nx-1+nghost][j+nghost])/2;
+			u[i+nghost][j+nghost]=0.0;
+		} else if (st.XBC == SLIPWALL){
+			u[i+nghost][j+nghost]=0.0;
 		} else {
-			u[i][j]=0.0;
+			u[i+nghost][j+nghost]=0.0;
 		}
 	}
 #ifdef DBGBCS
@@ -459,9 +522,12 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 	#pragma omp parallel for
 	for(j = 0; j<ny; j++){ //Right Wall
 		if(st.XBC == PERIODIC){
-			u[i][j]=(u[1][j]+u[nx-1][j])/2;
+			u[i+nghost][j+nghost]=(u[1+nghost][j+nghost]+u[nx-1+nghost][j+nghost])/2;
+			u[i+nghost][j+nghost]=0.0;
+		} else if (st.XBC == SLIPWALL){
+			u[i+nghost][j+nghost]=0.0;
 		} else {
-			u[i][j]=0.0;
+			u[i+nghost][j+nghost]=0.0;
 		}
 	}
 
@@ -472,11 +538,13 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 	i = 0;
 	j = 0;
 	#pragma omp parallel for
-	for(i = 0; i<nx+1; i++){ //Lower Wall
+	for(i = -1; i<nx+1; i++){ //Lower Wall
 		if(st.YBC == PERIODIC){
-			v[i][j]=(v[i][1]+v[i][ny])/2;
+			v[i+nghost][j+nghost]=(v[i+nghost][1+nghost]+v[i+nghost][ny+nghost-2])/2;
+		} else if (st.YBC == SLIPWALL){
+			v[i+nghost][j+nghost]=0.0;
 		} else {
-			v[i][j]=0.0;
+			v[i+nghost][j+nghost]=0.0;
 		}
 	}
 	j = ny-1;
@@ -484,11 +552,13 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 		printf("\t Setting V Upper BC \n");
 #endif
 	#pragma omp parallel for
-	for(i = 0; i<nx+1; i++){ //Upper Wall
+	for(i = -1; i<nx+1; i++){ //Upper Wall
 		if(st.YBC == PERIODIC){
-			v[i][j]=(v[i][1]+v[i][ny])/2;
+			v[i+nghost][j+nghost]=(v[i+nghost][1+nghost]+v[i+nghost][ny+nghost-2])/2;
+		} else if (st.YBC == SLIPWALL){
+			v[i+nghost][j+nghost]=0.0;
 		} else {
-			v[i][j]=0.0;
+			v[i+nghost][j+nghost]=0.0;
 		}
 	}
 #ifdef DBGBCS
@@ -498,21 +568,40 @@ void set_bcs(double** restrict u, double** restrict v, double dx, double dy, int
 	#pragma omp parallel for
 	for(j = 0; j<ny; j++){ //Left Wall
 		if(st.XBC == PERIODIC){
-			v[i][j] = v[nx][j];
+			v[i+nghost-1][j+nghost] = v[i+nghost][j+nghost]; //left oob is left ib %%%%%%%%%%%%%%%%%%%%
+			//v[i+nghost-1][j+nghost] = v[i+nghost+nx-2][j+nghost]; //left oob is right ib %%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+			//v[i+nghost][j+nghost] = v[i+nghost+nx-2][j+nghost];
+			for (int ii = 0; ii < nx/2; ii++){
+				v[i+nghost+ii][j+nghost] = v[i+nghost+nx-2-ii][j+nghost];
+
+			}
+			for (int ii = 0; ii<ny/2; ii++){
+				u[i+nghost+ii][j+nghost] = -u[i+nghost+nx-2-ii][j+nghost];
+			}
+			//v[i+nghost+1][j+nghost] = v[i+nghost+nx-3][j+nghost];
+			//v[i+nghost+2][j+nghost] = v[i+nghost+nx-4][j+nghost];
+		} else if (st.XBC == SLIPWALL){
+			v[i+nghost-1][j+nghost] = v[i+nghost][j+nghost]; //left oob is left ib
 		} else {
-			v[i][j]=v[i+1][j]-2*(v[i+1][j]-st.YLV);
+			//v[i+nghost][j+nghost]=v[i+1+nghost][j+nghost]-2*(v[i+1+nghost][j+nghost]-st.YLV);
+			v[i+nghost-1][j+nghost]=-v[i+nghost][j+nghost]+2.0*st.YLV; //left averages
+
 		}
 	}
 #ifdef DBGBCS
 		printf("\t Setting V Right BC \n");
 #endif
-	i = nx;
+	i = nx-1;
 	#pragma omp parallel for
 	for(j = 0; j<ny; j++){ //Right Wall
 		if(st.XBC == PERIODIC){
-			v[i][j] = v[1][j];
+			v[i+nghost][j+nghost] = v[nghost][j+nghost]; //right oob is left ib
+		} else if (st.XBC == SLIPWALL){
+			v[i+nghost][j+nghost] = v[i+nghost-1][j+nghost]; //right oob is right ib
 		} else {
-			v[i][j]=v[i-1][j]-2*(v[i-1][j]-st.YRV);
+			//v[i+nghost][j+nghost]=v[i-1+nghost][j+nghost]-2*(v[i-1+nghost][j+nghost]-st.YRV);
+			v[i+nghost-1][j+nghost]=-v[i+nghost-1][j+nghost]+2.0*st.YRV; //right averages
+			//v[i+nghost][j+nghost]=v[0+nghost-1][j+nghost];
 		}
 	}
 #ifdef DBGBCS
@@ -583,6 +672,61 @@ void set_all_bcs_neumann(double** restrict x, double dx, double dy, int  nx, int
 		printf("\t Neumann BC Done! \n");
 #endif
 }
+void set_all_BCS(double** restrict x, double dx, double dy, int  nx, int ny, int nghost,struct slv_settings st){
+	int i,j;
+	i = 0;
+	for(int j = -nghost; j<ny+nghost-1; j++){//left wall right wall
+		if(st.XBC == PERIODIC){
+			x[i+nghost-1][j+nghost] = x[i+nghost  ][j+nghost]; //left oob is right ib
+			x[i+nghost-2][j+nghost] = x[i+nghost+1][j+nghost]; //left oob is right ib
+			x[i+nghost-3][j+nghost] = x[i+nghost+2][j+nghost]; //left oob is right ib
+			x[i+nghost+nx-1][j+nghost] = x[i+nghost+nx-2][j+nghost]; //right oob is left ib
+			x[i+nghost+nx  ][j+nghost] = x[i+nghost+nx-3][j+nghost]; //right oob is left ib
+			x[i+nghost+nx+1][j+nghost] = x[i+nghost+nx-4][j+nghost]; //right oob is left ib
+		} /*else if (st.XBC == SLIPWALL) {
+			x[i+nghost-1][j+nghost] = x[i+nghost+nx-2][j+nghost]; //left oob is right ib
+			x[i+nghost-2][j+nghost] = x[i+nghost+nx-3][j+nghost]; //left oob is right ib
+			x[i+nghost-3][j+nghost] = x[i+nghost+nx-3][j+nghost]; //left oob is right ib
+			x[i+nghost+nx-1][j+nghost] = x[i+nghost  ][j+nghost]; //right oob is left ib
+			x[i+nghost+nx  ][j+nghost] = x[i+nghost+1][j+nghost]; //right oob is left ib
+			x[i+nghost+nx+1][j+nghost] = x[i+nghost+2][j+nghost]; //right oob is left ib
+		} else {
+			x[i+nghost-1][j+nghost] = x[i+nghost  ][j+nghost]; //left oob is right ib
+			x[i+nghost-2][j+nghost] = x[i+nghost+1][j+nghost]; //left oob is right ib
+			x[i+nghost-3][j+nghost] = x[i+nghost+2][j+nghost]; //left oob is right ib
+			x[i+nghost+nx-1][j+nghost] = x[i+nghost+nx-2][j+nghost]; //right oob is left ib
+			x[i+nghost+nx  ][j+nghost] = x[i+nghost+nx-3][j+nghost]; //right oob is left ib
+			x[i+nghost+nx+1][j+nghost] = x[i+nghost+nx-4][j+nghost]; //right oob is left ib
+		}*/
+	}
+	j = 0;
+	for(int i =-nghost; i<nx+nghost-1; i++){
+		if(st.YBC == PERIODIC){
+			x[i+nghost][j+nghost-1] = x[i+nghost][j+nghost+ny-1]; //bottom oob is top ib
+			x[i+nghost][j+nghost-2] = x[i+nghost][j+nghost+ny-2]; //bottom oob is top ib
+			x[i+nghost][j+nghost-3] = x[i+nghost][j+nghost+ny-3]; //bottom oob is top ib
+			x[i+nghost][j+nghost+ny-1] = x[i+nghost][j+nghost  ]; //top oob is bottom ib
+			x[i+nghost][j+nghost+ny  ] = x[i+nghost][j+nghost+1]; //top oob is bottom ib
+			x[i+nghost][j+nghost+ny+1] = x[i+nghost][j+nghost+2]; //top oob is bottom ib
+		} /*else if (st.YBC == SLIPWALL) {
+			x[i+nghost][j+nghost-1] = x[i+nghost][j+nghost+ny-2]; //bottom oob is top ib
+			x[i+nghost][j+nghost-2] = x[i+nghost][j+nghost+ny-3]; //bottom oob is top ib
+			x[i+nghost][j+nghost-3] = x[i+nghost][j+nghost+ny-4]; //bottom oob is top ib
+			x[i+nghost][j+nghost+ny-1] = x[i+nghost][j+nghost  ]; //top oob is bottom ib
+			x[i+nghost][j+nghost+ny  ] = x[i+nghost][j+nghost+1]; //top oob is bottom ib
+			x[i+nghost][j+nghost+ny+1] = x[i+nghost][j+nghost+2]; //top oob is bottom ib
+		} */else {
+			x[i+nghost][j+nghost-1] = x[i+nghost][j+nghost]; //bottom oob is top ib
+			x[i+nghost][j+nghost-2] = x[i+nghost][j+nghost+1]; //bottom oob is top ib
+			x[i+nghost][j+nghost-3] = x[i+nghost][j+nghost+2]; //bottom oob is top ib
+			x[i+nghost][j+nghost+ny-2] = x[i+nghost][j+nghost+ny-1]; //top oob is bottom ib
+			x[i+nghost][j+nghost+ny-3] = x[i+nghost][j+nghost+ny  ]; //top oob is bottom ib
+			x[i+nghost][j+nghost+ny-4] = x[i+nghost][j+nghost+ny+1]; //top oob is bottom ib
+		}
+
+	}
+
+}
 
 /* Get u and V */
 void get_uv(double** restrict u, double** restrict v, double** restrict usv,double** restrict vsv,int nx, int ny)
@@ -639,12 +783,15 @@ void get_stream(double** restrict strm, double** restrict strmnext, double** res
 
 /* Viscous Burgers Equation Solver */
 /* Uses AB2 + ADI */
-void slv_vbe(double** restrict u, double** restrict us, double** restrict dus, double** restrict duss, double** restrict v, double** restrict vs, double** restrict dvs, double** restrict dvss, double** restrict hu, double** restrict huold,double** restrict hv, double** restrict hvold, double dx, double dy, int nx, int ny, double Re, double dt, struct slv_settings st)
+void slv_vbe(double** restrict a, double** restrict u, double** restrict us, double** restrict dus, double** restrict duss, double** restrict v, double** restrict vs, double** restrict dvs, double** restrict dvss, double** restrict hu, double** restrict huold,double** restrict hv, double** restrict hvold, double dx, double dy, int nx, int ny, int nghost, double dt, struct slv_settings st)
 {
 	double dx2 = pow(dx,2.0);
 	double dy2 = pow(dy,2.0);
-	double ce = dt/(2.0*Re);
-	#pragma omp parallel
+	double ce = dt/(2.0);
+#ifdef DBGVBE
+	printf("\n slv_vbe call \n");
+#endif
+	//#pragma omp parallel
 	{	
 		double* bum = malloc((nx-2)*sizeof(double));
 		double* lum = malloc((nx-2)*sizeof(double));
@@ -658,103 +805,151 @@ void slv_vbe(double** restrict u, double** restrict us, double** restrict dus, d
 		double* mvm = malloc((nx-1)*sizeof(double));
 		double* uvm = malloc((nx-1)*sizeof(double));
 		double* xvm = malloc((nx-1)*sizeof(double));
+#ifdef DBGVBE
+	printf("\n slv_vbe malloc 1 done \n");
+#endif
 		
 		#pragma omp parallel for
-		for(int i=1;i<nx;i++){
-			for(int j=1;j<ny;j++){	
+		for(int i=0;i<nx;i++){
+			for(int j=0;j<ny;j++){
+
 				/* Do this for all u */					
-				if(i!=nx-1){
+				if(i!=0){
 					huold[i][j] = hu[i][j];
-					hu[i][j] = -((u[i+1][j]+u[i][j])*(u[i+1][j]+u[i][j])-(u[i-1][j]+u[i][j])*(u[i-1][j]+u[i][j]))/(4.0*dx)-((u[i][j+1]+u[i][j])*(v[i][j]+v[i+1][j])-(u[i][j-1]+u[i][j])*(v[i][j-1]+v[i+1][j-1]))/(4.0*dy) + st.XConst;
+					hu[i][j] = -((u[i+1+nghost][j+nghost]+u[i+nghost][j+nghost])*(u[i+1+nghost][j+nghost]+u[i+nghost][j+nghost])-
+							     (u[i-1+nghost][j+nghost]+u[i+nghost][j+nghost])*(u[i-1+nghost][j+nghost]+u[i+nghost][j+nghost]))/(4.0*dx)-
+						        ((u[i+nghost][j+1+nghost]+u[i+nghost][j+nghost])*(v[i+nghost][j+nghost]+v[i+1+nghost][j+nghost])-
+						         (u[i+nghost][j-1+nghost]+u[i+nghost][j+nghost])*(v[i+nghost][j-1+nghost]+v[i+1+nghost][j-1+nghost]))/(4.0*dy) + st.XConst ;
 				}		
 				/* Do this for all v */
-				if(j!=ny-1){
+				if(j!=0){
 					hvold[i][j] = hv[i][j];
-					hv[i][j] = -((v[i][j+1]+v[i][j])*(v[i][j+1]+v[i][j])-(v[i][j-1]+v[i][j])*(v[i][j-1]+v[i][j]))/(4.0*dy)-((v[i+1][j]+v[i][j])*(u[i][j]+u[i][j+1])-(v[i-1][j]+v[i][j])*(u[i-1][j]+u[i-1][j+1]))/(4.0*dx) + st.YConst;
+					hv[i][j] = -((v[i+nghost][j+1+nghost]+v[i+nghost][j+nghost])*(v[i+nghost][j+1+nghost]+v[i+nghost][j+nghost])-
+							     (v[i+nghost][j-1+nghost]+v[i+nghost][j+nghost])*(v[i+nghost][j-1+nghost]+v[i+nghost][j+nghost]))/(4.0*dy)-
+							    ((v[i+1+nghost][j+nghost]+v[i+nghost][j+nghost])*(u[i+nghost][j+nghost]+u[i+nghost][j+1+nghost])-
+							     (v[i-1+nghost][j+nghost]+v[i+nghost][j+nghost])*(u[i-1+nghost][j+nghost]+u[i-1+nghost][j+1+nghost]))/(4.0*dx) + st.YConst +st.g;
 				}
 			}
+
 		}
+#ifdef DBGVBE
+	printf("\n slv_vbe h 1 done \n");
+#endif
 
 		
-		#pragma omp parallel for
-		for(int j=1;j<ny;j++){
-			for(int i = 1; i<nx;i++){
-			
+		//#pragma omp parallel for
+		for(int j=0;j<ny-1;j++){
+			for(int i = 0; i<nx-1;i++){
+				double rho = a[i+nghost][j+nghost]*st.rhol+(1-a[i+nghost][j+nghost])*st.rhog;
+				double mu = a[i+nghost][j+nghost]*st.mul+(1-a[i+nghost][j+nghost])*st.mug;
 				/* limit range for u */
-				if (i == 1){
-					bum[i-1] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*((u[i+1][j]-2.0*u[i][j]+u[i-1][j])/dx2+(u[i][j+1]-2.0*u[i][j]+u[i][j-1])/dy2);
-					lum[i-1] = -ce/dx2;
-					mum[i-1] = (1+2*ce/dx2);
+				if (i == 0){
+					bum[i] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*mu/rho*((u[i+1+nghost][j+nghost]-2.0*u[i+nghost][j+nghost]+u[i-1+nghost][j+nghost])/dx2
+							+(u[i+nghost][j+1+nghost]-2.0*u[i+nghost][j+nghost]+u[i+nghost][j-1+nghost])/dy2);
+					lum[i] = -ce/dx2*mu/rho;
+					mum[i] = (1+2*ce*mu/rho/dx2);
 					
-					if(j!=ny-1){
-						bvm[i-1] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*((v[i+1][j]-2.0*v[i][j]+v[i-1][j])/dx2+(v[i][j+1]-2.0*v[i][j]+v[i][j-1])/dy2);
-						lvm[i-1] = -ce/dx2;
-						mvm[i-1] = (1.0+2.0*ce/dx2);
+					if(j!=ny){
+						bvm[i] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*mu/rho*((v[i+1+nghost][j+nghost]-2.0*v[i+nghost][j+nghost]+v[i-1+nghost][j+nghost])/dx2
+								+(v[i+nghost][j+1+nghost]-2.0*v[i+nghost][j+nghost]+v[i+nghost][j-1+nghost])/dy2);
+						lvm[i] = -ce/dx2*mu/rho;
+						mvm[i] = (1.0+2.0*ce/dx2*mu/rho);
+					}
+				} else if (i == nx-3){
+					bum[i] = dt/1.0*(2.0*hu[i][j]-huold[i][j])+2.0*ce*mu/rho*((u[i+1+nghost][j+nghost]-2.0*u[i+nghost][j+nghost]+u[i-1+nghost][j+nghost])/dx2
+							+(u[i+nghost][j+1+nghost]-2.0*u[i+nghost][j+nghost]+u[i+nghost][j-1+nghost])/dy2);
+					mum[i] = (1+2*ce/dx2*mu/rho);
+					uum[i] = -ce/dx2*mu/rho;
+					
+					if(j!=0){
+						bvm[i] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*mu/rho*((v[i+1+nghost][j+nghost]-2.0*v[i+nghost][j+nghost]+v[i-1+nghost][j+nghost])/dx2+
+								(v[i+nghost][j+1+nghost]-2.0*v[i+nghost][j+nghost]+v[i+nghost][j-1+nghost])/dy2);
+						lvm[i] = -ce/dx2*mu/rho;
+						mvm[i] = (1.0+2.0*ce/dx2*mu/rho);
+						uvm[i] = -ce/dx2*mu/rho;
 					}
 				} else if (i == nx-2){
-					bum[i-1] = dt/1.0*(2.0*hu[i][j]-huold[i][j])+2.0*ce*((u[i+1][j]-2.0*u[i][j]+u[i-1][j])/dx2+(u[i][j+1]-2.0*u[i][j]+u[i][j-1])/dy2);
-					mum[i-1] = (1+2*ce/dx2);
-					uum[i-1] = -ce/dx2;
-					
-					if(j!=ny-1){
-						bvm[i-1] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*((v[i+1][j]-2.0*v[i][j]+v[i-1][j])/dx2+(v[i][j+1]-2.0*v[i][j]+v[i][j-1])/dy2);
-						lvm[i-1] = -ce/dx2;
-						mvm[i-1] = (1.0+2.0*ce/dx2);
-						uvm[i-1] = -ce/dx2;
-					}
-				} else if (i == nx-1){
-					if(j!=ny-1){
-						bvm[i-1] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*((v[i+1][j]-2.0*v[i][j]+v[i-1][j])/dx2+(v[i][j+1]-2.0*v[i][j]+v[i][j-1])/dy2);
-						mvm[i-1] = (1.0+2.0*ce/dx2);
-						uvm[i-1] = -ce/dx2;
+					if(j!=0){
+						bvm[i] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*mu/rho*((v[i+1+nghost][j+nghost]-2.0*v[i+nghost][j+nghost]+v[i-1+nghost][j+nghost])/dx2+
+								(v[i+nghost][j+1+nghost]-2.0*v[i+nghost][j+nghost]+v[i+nghost][j-1+nghost])/dy2);
+						mvm[i] = (1.0+2.0*ce/dx2*mu/rho);
+						uvm[i] = -ce/dx2*mu/rho;
 					}
 				} else {
 					
-					bum[i-1] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*((u[i+1][j]-2.0*u[i][j]+u[i-1][j])/dx2+(u[i][j+1]-2.0*u[i][j]+u[i][j-1])/dy2);
-					lum[i-1] = -ce/dx2;
-					mum[i-1] = (1.0+2.0*ce/dx2);
-					uum[i-1] = -ce/dx2;
+					bum[i] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*mu/rho*((u[i+1+nghost][j+nghost]-2.0*u[i+nghost][j+nghost]+u[i-1+nghost][j+nghost])/dx2+
+							(u[i+nghost][j+1+nghost]-2.0*u[i+nghost][j+nghost]+u[i+nghost][j-1+nghost])/dy2);
+					lum[i] = -ce/dx2*mu/rho;
+					mum[i] = (1.0+2.0*ce/dx2*mu/rho);
+					uum[i] = -ce/dx2*mu/rho;
 	
-					if(j!=ny-1){
-						bvm[i-1] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*((v[i+1][j]-2.0*v[i][j]+v[i-1][j])/dx2+(v[i][j+1]-2.0*v[i][j]+v[i][j-1])/dy2);
-						lvm[i-1] = -ce/dx2;
-						mvm[i-1] = (1.0+2.0*ce/dx2);
-						uvm[i-1] = -ce/dx2;
+					if(j!=0){
+						bvm[i] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*mu/rho*((v[i+1+nghost][j+nghost]-2.0*v[i+nghost][j+nghost]+v[i-1][j])/dx2+
+								(v[i+nghost][j+1+nghost]-2.0*v[i+nghost][j+nghost]+v[i+nghost][j-1+nghost])/dy2);
+						lvm[i] = -ce/dx2*mu/rho;
+						mvm[i] = (1.0+2.0*ce/dx2*mu/rho);
+						uvm[i] = -ce/dx2*mu/rho;
 					}
 				}
 			}
+/*#ifdef DBGVBE
+	printf("\n slv_vbe post setup done \n");
+#endif*/
 			
 			solve_matrix(nx-2,lum,mum,uum,bum,xum);
 			if(j!=ny-1){
 				solve_matrix(nx-1,lvm,mvm,uvm,bvm,xvm);
 			}			
-
-			for(int i = 1;i<nx;i++){
-				if(i!=nx-1){
-					duss[i][j] = xum[i-1];
+/*#ifdef DBGVBE
+	printf("\n slv_vbe post solve 1\n");
+#endif*/
+			for(int i = 0;i<nx-1;i++){
+				if(i!=0){
+					duss[i][j] = xum[i];
 				}
-				if(j!=ny-1){
-					dvss[i][j] = xvm[i-1];
+				if(j!=0){
+					dvss[i][j] = xvm[i];
 				}
 			}	
-		}
+		}/*
+		free(bum);
+		free(lum);
+		free(mum);
+		free(uum);
+		free(xum);
+		free(bvm);
+		free(lvm);
+		free(mvm);
+		free(uvm);
+		free(xvm);*/
 	}
+//#pragma omp end parallel
+#pragma omp barrier
 	#pragma omp parallel for
-	for(int i = 1; i<nx; i++){
-		for(int j=1; j<ny; j++){
-			if(j!=ny-1){
-				vs[i][j] = v[i][j]+dvss[i][j];
+	for(int i = 0; i<nx-1; i++){
+		for(int j=0; j<ny-1; j++){
+			if(j!=0){
+				vs[i+nghost][j+nghost] = v[i+nghost][j+nghost]+dvss[i][j];
 			}
-			if(i!=nx-1){
-				us[i][j] = u[i][j]+duss[i][j];
+			if(i!=0){
+				us[i+nghost][j+nghost] = u[i+nghost][j+nghost]+duss[i][j];
 			}
 		}
 	}
-	
-	set_bcs(us, vs, dx, dy, nx, ny, Re, st);
-	
-	#pragma omp parallel
+#pragma omp barrier
+#ifdef DBGVBE
+	printf("\n slv_vbe post set solution 1\n");
+#endif
+#ifdef DBGVBE
+	printf("\n slv_vbe set intermediate BCS \n");
+#endif
+	set_bcs(us, vs, dx, dy, nx, ny,nghost, st);
+#ifdef DBGVBE
+	printf("\n slv_vbe post set intermediate BCS \n");
+#endif
+	//#pragma omp parallel
 	{
+
 				double* bumy = malloc((nx-1)*sizeof(double));
                 double* lumy = malloc((nx-1)*sizeof(double));
                 double* mumy = malloc((nx-1)*sizeof(double));
@@ -765,78 +960,111 @@ void slv_vbe(double** restrict u, double** restrict us, double** restrict dus, d
                 double* lvmy = malloc((nx-2)*sizeof(double));
                 double* mvmy = malloc((nx-2)*sizeof(double));
                 double* uvmy = malloc((nx-2)*sizeof(double));
-                double* xvmy = malloc((nx-2)*sizeof(double));		
-
-		for(int i = 1; i<nx; i++){
-			for(int j = 1; j<ny; j++){
+                double* xvmy = malloc((nx-2)*sizeof(double));
+#ifdef DBGVBE
+	printf("\n slv_vbe post malloc 2 \n");
+#endif
+		//#pragma omp parallel for
+		for(int i = 0; i<nx-1; i++){
+			for(int j = 0; j<ny-1; j++){
+				double rho = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+				double mu = a[i+nghost][j+nghost]*st.mul+(1.0-a[i+nghost][j+nghost])*st.mug;
+				//printf("%i,%i ",i,j);
 				/* limit range for v */
-				if (j == 1){
-					if(i!=nx-1){	
-						bumy[j-1] = duss[i][j];	
-						bumy[j-1] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*((us[i+1][j]-2.0*us[i][j]+us[i-1][j])/dx2+(us[i][j+1]-2.0*us[i][j]+us[i][j-1])/dy2);
-						lumy[j-1] = -ce/dy2;
-						mumy[j-1] = (1.0+2.0*ce/dy2);
+				if (j == 0){
+					if(i!=0){
+						bumy[j] = duss[i][j];
+						bumy[j] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*mu/rho*((us[i+1+nghost][j+nghost]-2.0*us[i+nghost][j+nghost]+us[i-1+nghost][j+nghost])/dx2+
+								(us[i+nghost][j+1+nghost]-2.0*us[i+nghost][j+nghost]+us[i+nghost][j-1+nghost])/dy2);
+						lumy[j] = -ce/dy2*mu/rho;
+						mumy[j] = (1.0+2.0*ce/dy2*mu/rho);
 					}
-					bvmy[j-1] = dvss[i][j];		
-					bvmy[j-1] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*((vs[i+1][j]-2.0*vs[i][j]+vs[i-1][j])/dx2+(vs[i][j+1]-2.0*vs[i][j]+vs[i][j-1])/dy2);
-					lvmy[j-1] = -ce/dy2;
-					mvmy[j-1] = (1.0+2.0*ce/dy2);
+					bvmy[j] = dvss[i][j];
+					bvmy[j] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*mu/rho*((vs[i+1+nghost][j+nghost]-2.0*vs[i+nghost][j+nghost]+vs[i-1+nghost][j+nghost])/dx2+
+							(vs[i+nghost][j+1+nghost]-2.0*vs[i+nghost][j+nghost]+vs[i+nghost][j-1+nghost])/dy2);
+					lvmy[j] = -ce/dy2*mu/rho;
+					mvmy[j] = (1.0+2.0*ce/dy2*mu/rho);
+				} else if (j == ny-3){
+					if(i!=0){
+						bumy[j] = duss[i][j];
+						bumy[j] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*mu/rho*((us[i+1+nghost][j+nghost]-2.0*us[i+nghost][j+nghost]+us[i-1+nghost][j+nghost])/dx2+
+								(us[i+nghost][j+1+nghost]-2.0*us[i+nghost][j+nghost]+us[i+nghost][j-1+nghost])/dy2);
+						lumy[j] = -ce/dy2*mu/rho;
+						mumy[j] = (1.0+2.0*ce/dy2*mu/rho);
+						uumy[j] = -ce/dy2*mu/rho;
+					}
+					bvmy[j] = dvss[i][j];
+					bvmy[j] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*mu/rho*((vs[i+1+nghost][j+nghost]-2.0*vs[i+nghost][j+nghost]+vs[i-1+nghost][j+nghost])/dx2+
+							(vs[i+nghost][j+1+nghost]-2.0*vs[i+nghost][j+nghost]+vs[i+nghost][j-1+nghost])/dy2);
+					mvmy[j] = (1.0+2.0*ce/dy2*mu/rho);
+					uvmy[j] = -ce/dy2*mu/rho;
 				} else if (j == ny-2){
-					if(i!=nx-1){
-						bumy[j-1] = duss[i][j];	
-						bumy[j-1] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*((us[i+1][j]-2.0*us[i][j]+us[i-1][j])/dx2+(us[i][j+1]-2.0*us[i][j]+us[i][j-1])/dy2);
-						lumy[j-1] = -ce/dy2;
-						mumy[j-1] = (1.0+2.0*ce/dy2);
-						uumy[j-1] = -ce/dy2;
-					}
-					bvmy[j-1] = dvss[i][j];		
-					bvmy[j-1] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*((vs[i+1][j]-2.0*vs[i][j]+vs[i-1][j])/dx2+(vs[i][j+1]-2.0*vs[i][j]+vs[i][j-1])/dy2);
-					mvmy[j-1] = (1.0+2.0*ce/dy2);
-					uvmy[j-1] = -ce/dy2;
-				} else if (j == ny-1){
-					if(i!=nx-1){
-						bumy[j-1] = duss[i][j];	
-						bumy[j-1] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*((us[i+1][j]-2.0*us[i][j]+us[i-1][j])/dx2+(us[i][j+1]-2.0*us[i][j]+us[i][j-1])/dy2);
-						mumy[j-1] = (1.0+2.0*ce/dy2);
-						uumy[j-1] = -ce/dy2;
+					if(i!=0){
+						bumy[j] = duss[i][j];
+						bumy[j] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*mu/rho*((us[i+1+nghost][j+nghost]-2.0*us[i+nghost][j+nghost]+us[i-1+nghost][j+nghost])/dx2+
+								(us[i+nghost][j+1+nghost]-2.0*us[i+nghost][j+nghost]+us[i+nghost][j-1+nghost])/dy2);
+						mumy[j] = (1.0+2.0*ce/dy2*mu/rho);
+						uumy[j] = -ce/dy2*mu/rho;
 					}
 				} else {
-					if(i!=nx-1){	
-						bumy[j-1] = duss[i][j];	
-						bumy[j-1] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*((us[i+1][j]-2.0*us[i][j]+us[i-1][j])/dx2+(us[i][j+1]-2.0*us[i][j]+us[i][j-1])/dy2);
-						lumy[j-1] = -ce/dy2;
-						mumy[j-1] = (1.0+2.0*ce/dy2);
-						uumy[j-1] = -ce/dy2;
+					if(i!=0){
+						bumy[j] = duss[i][j];
+						bumy[j] = dt/2.0*(3.0*hu[i][j]-huold[i][j])+2.0*ce*mu/rho*((us[i+1+nghost][j+nghost]-2.0*us[i+nghost][j+nghost]+us[i-1+nghost][j+nghost])/dx2+
+								(us[i+nghost][j+1+nghost]-2.0*us[i+nghost][j+nghost]+us[i+nghost][j-1+nghost])/dy2);
+						lumy[j] = -ce/dy2*mu/rho;
+						mumy[j] = (1.0+2.0*ce/dy2*mu/rho);
+						uumy[j] = -ce/dy2*mu/rho;
 					}
-					bvmy[j-1] = dvss[i][j];	
-					bvmy[j-1] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*((vs[i+1][j]-2.0*vs[i][j]+vs[i-1][j])/dx2+(vs[i][j+1]-2.0*vs[i][j]+vs[i][j-1])/dy2);
-					lvmy[j-1] = -ce/dy2;
-					mvmy[j-1] = (1.0+2.0*ce/dy2);
-					uvmy[j-1] = -ce/dy2;
+					bvmy[j] = dvss[i][j];
+					bvmy[j] = dt/2.0*(3.0*hv[i][j]-hvold[i][j])+2.0*ce*mu/rho*((vs[i+1+nghost][j+nghost]-2.0*vs[i+nghost][j+nghost]+vs[i-1+nghost][j+nghost])/dx2+
+							(vs[i+nghost][j+1+nghost]-2.0*vs[i+nghost][j+nghost]+vs[i+nghost][j-1+nghost])/dy2);
+					lvmy[j] = -ce/dy2*mu/rho;
+					mvmy[j] = (1.0+2.0*ce/dy2*mu/rho);
+					uvmy[j] = -ce/dy2*mu/rho;
 				}
 			}
-			if(i!=nx-1){
+/*#ifdef DBGVBE
+	printf("\n slv_vbe post loop 2 \n");
+#endif*/
+			if(i!=0){
 				solve_matrix(ny-1,lumy,mumy,uumy,bumy,xumy);
 			}
 			solve_matrix(ny-2,lvmy,mvmy,uvmy,bvmy,xvmy);		
-			for(int j = 1;j<ny;j++){
-				if(j!=ny-1){
-					dvs[i][j] = xvmy[j-1];
+			for(int j = 0;j<ny-2;j++){
+				if(j!=0){
+					dvs[i][j] = xvmy[j];
 				}
-				if(i!=nx-1){
-					dus[i][j] = xumy[j-1];
+				if(i!=0){
+					dus[i][j] = xumy[j];
 				}
 			}	
 		}
+#ifdef DBGVBE
+	printf("\n slv_vbe post set solution \n");
+#endif
+		/*free(bumy);
+		free(lumy);
+		free(mumy);
+		free(uumy);
+		free(xumy);
+		free(bvmy);
+		free(lvmy);
+		free(mvmy);
+		free(uvmy);
+		free(xvmy);*/
+#ifdef DBGVBE
+	printf("\n slv_vbe post free 2 \n");
+#endif
 	}
+#pragma omp barrier
 	#pragma omp parallel for
-	for(int i = 1; i<nx; i++){
-		for(int j=1; j<ny; j++){
-			if(j!=ny-1){
-				vs[i][j] = vs[i][j]+dvs[i][j];
+	for(int i = 0; i<nx-1; i++){
+		for(int j=0; j<ny-1; j++){
+			if(j!=0){
+				vs[i+nghost][j+nghost] = vs[i+nghost][j+nghost]+dvs[i][j];
 			}
-			if(i!=nx-1){
-				us[i][j] = us[i][j]+dus[i][j];
+			if(i!=0){
+				us[i+nghost][j+nghost] = us[i+nghost][j+nghost]+dus[i][j];
 			}
 		}
 	}
@@ -859,121 +1087,251 @@ void slv_vbe(double** restrict u, double** restrict us, double** restrict dus, d
 		}
 	}
 	*/
+	set_bcs(us, vs, dx, dy, nx, ny,nghost, st);
 }
 
 /* ftcs solver */
-void slv_vbeftcs(double** restrict u, double** restrict us, double** restrict dus, double** restrict duss, double** restrict v, double** restrict vs, double** restrict dvs, double** restrict dvss, double** restrict hu, double** restrict huold,double** restrict hv, double** restrict hvold, double dx, double dy, int nx, int ny, double Re, double dt, struct slv_settings st)
+void slv_vbeftcs(double** restrict a, double** restrict u, double** restrict us, double** restrict dus, double** restrict duss, double** restrict v, double** restrict vs, double** restrict dvs, double** restrict dvss, double** restrict hu, double** restrict huold,double** restrict hv, double** restrict hvold, double dx, double dy, int nx, int ny, int nghost, double dt, struct slv_settings st)
 {
 	
 	double dx2 = pow(dx,2.0);
 	double dy2 = pow(dy,2.0);
-	double ce = dt/(Re);
+	double ce = dt;
+	int xp = 0;
+	int yp = 0;
+	if (st.XBC == PERIODIC){
+		xp = 1;
+	}
+	if (st.YBC == PERIODIC){
+		yp = 1;
+	}
+
 	#pragma omp parallel for
-	for(int i=1;i<nx;i++){
-		for(int j=1;j<ny;j++){
+	for(int i=0;i<nx-1;i++){
+		for(int j=0;j<ny-1;j++){
 			/* Do this for all u */					
-			if(i!=nx-1){
+			if(i!=0){
 				huold[i][j] = hu[i][j];
-				hu[i][j] = -((u[i+1][j]+u[i][j])*(u[i+1][j]+u[i][j])-(u[i-1][j]+u[i][j])*(u[i-1][j]+u[i][j]))/(4.0*dx)-((u[i][j+1]+u[i][j])*(v[i][j]+v[i+1][j])-(u[i][j-1]+u[i][j])*(v[i][j-1]+v[i+1][j-1]))/(4.0*dy) + st.XConst;
+				hu[i][j] = -((u[i+1+nghost][j+nghost]+u[i+nghost][j+nghost])*(u[i+1+nghost][j+nghost]+u[i+nghost][j+nghost])
+				        -(u[i-1+nghost][j+nghost]+u[i+nghost][j+nghost])*(u[i-1+nghost][j+nghost]+u[i+nghost][j+nghost]))/(4.0*dx)
+						-((u[i+nghost][j+1+nghost]+u[i+nghost][j+nghost])*(v[i+nghost][j+nghost]+v[i+1+nghost][j+nghost])
+								-(u[i+nghost][j-1+nghost]+u[i+nghost][j+nghost])*(v[i+nghost][j-1+nghost]+v[i+1+nghost][j-1+nghost]))/(4.0*dy) + st.XConst;
 			}		
 			/* Do this for all v */
-			if(j!=ny-1){
+			if(j!=0){
 				hvold[i][j] = hv[i][j];
-				hv[i][j] = -((v[i][j+1]+v[i][j])*(v[i][j+1]+v[i][j])-(v[i][j-1]+v[i][j])*(v[i][j-1]+v[i][j]))/(4.0*dy)-((v[i+1][j]+v[i][j])*(u[i][j]+u[i][j+1])-(v[i-1][j]+v[i][j])*(u[i-1][j]+u[i-1][j+1]))/(4.0*dx) + st.YConst;
+				hv[i][j] = -((v[i+nghost][j+1+nghost]+v[i+nghost][j+nghost])*(v[i+nghost][j+1+nghost]+v[i+nghost][j+nghost])
+						-(v[i+nghost][j-1+nghost]+v[i+nghost][j+nghost])*(v[i+nghost][j-1+nghost]+v[i+nghost][j+nghost]))/(4.0*dy)
+						-((v[i+1+nghost][j+nghost]+v[i+nghost][j+nghost])*(u[i+nghost][j+nghost]+u[i+nghost][j+1+nghost])
+								-(v[i-1+nghost][j+nghost]+v[i+nghost][j+nghost])*(u[i-1+nghost][j+nghost]+u[i-1+nghost][j+1+nghost]))/(4.0*dx) + st.YConst + st.g ;
 			}
 		}
 	}
 	#pragma omp parallel for
-	for(int i=1;i<nx;i++){
-		for(int j = 1; j<nx;j++){
-			if(i!=nx-1){	
-				us[i][j] =u[i][j]+dt*(hu[i][j])+ce*((u[i+1][j]-2.0*u[i][j]+u[i-1][j])/dx2+(u[i][j+1]-2.0*u[i][j]+u[i][j-1])/dy2);
+	for(int i=0;i<nx-1;i++){
+		for(int j = 0; j<ny-1;j++){
+			double rpj, rmj, rpi, rmi, rmmi, rho;
+			rho = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+			rpj = a[i+nghost][j+nghost+1]*st.rhol+(1.0-a[i+nghost][j+nghost+1])*st.rhog;
+			rmj = a[i+nghost][j+nghost-1]*st.rhol+(1.0-a[i+nghost][j+nghost-1])*st.rhog;
+			rpi = a[i+nghost+1][j+nghost]*st.rhol+(1.0-a[i+nghost+1][j+nghost])*st.rhog;
+			rmi = a[i+nghost-1][j+nghost]*st.rhol+(1.0-a[i+nghost-1][j+nghost])*st.rhog;
+			double ru = (rho+rmi)/2.0;
+			double rv = (rho+rmj)/2.0;
+			double mpj, mmj, mpi,mmimj,mpimj, mmi,mmipj, mhu;
+			mhu = a[i+nghost][j+nghost]*st.mul+(1.0-a[i+nghost][j+nghost])*st.mug;
+			mpj = a[i+nghost][j+nghost+1]*st.mul+(1.0-a[i+nghost][j+nghost+1])*st.mug;
+			mmimj = a[i+nghost-1][j+nghost-1]*st.mul+(1.0-a[i+nghost-1][j+nghost-1])*st.mug;
+			mmipj = a[i+nghost-1][j+nghost+1]*st.mul+(1.0-a[i+nghost-1][j+nghost+1])*st.mug;
+			mmj = a[i+nghost][j+nghost-1]*st.mul+(1.0-a[i+nghost][j+nghost-1])*st.mug;
+			mpimj = a[i+nghost+1][j+nghost-1]*st.mul+(1.0-a[i+nghost+1][j+nghost-1])*st.mug;
+			mpi = a[i+nghost+1][j+nghost]*st.mul+(1.0-a[i+nghost+1][j+nghost])*st.mug;
+			mmi = a[i+nghost-1][j+nghost]*st.mul+(1.0-a[i+nghost-1][j+nghost])*st.mug;
+			if(i!=0){
+				us[i+nghost][j+nghost] = u[i+nghost][j+nghost]+dt*(1.5*hu[i][j]-0.5*huold[i][j])
+						+ce/ru*(1.0*(mhu)*(u[i+1+nghost][j+nghost]-u[i+nghost][j+nghost])/dx2 -                   1.0*(mmi)*(u[i+nghost][j+nghost]-u[i-1+nghost][j+nghost])/dx2
+                 +(mhu+mpj+mmipj+mmi)*.25*(u[i+nghost][j+1+nghost]-u[i+nghost][j+nghost])/dy2 -     (mhu+mmj+mmimj+mmi)*.25*(u[i+nghost][j+nghost]-u[i+nghost][j-1+nghost])/dy2);
+						           //+(mpi+mmipj+mhu+mmi)/4.0*(v[i+nghost+1][j+nghost]-v[i+nghost][j+nghost])/(dx*dy)
+						           //-(mmi+mmimj+mhu+mmi)/4.0*(v[i+nghost][j+nghost+1]-v[i+nghost-1][j+nghost+1])/(dy*dx) );
 			}
-			if(j!=ny-1){
-				vs[i][j] = v[i][j]+dt*(hv[i][j])+ce*((v[i+1][j]-2.0*v[i][j]+v[i-1][j])/dx2+(v[i][j+1]-2.0*v[i][j]+v[i][j-1])/dy2);
+			if(j!=0 ){
+				vs[i+nghost][j+nghost] = v[i+nghost][j+nghost]+dt*(1.5*hv[i][j]-0.5*hvold[i][j])
+						+ce/rv*((mhu+mpi+mmj+mpimj)*.25*(v[i+1+nghost][j+nghost]-v[i+nghost][j+nghost])/dx2 - (mhu+mmi+mmj+mmimj)*.25*(v[i+nghost][j+nghost]-v[i-1+nghost][j+nghost])/dx2
+						                     +1.0*(mhu)*(v[i+nghost][j+1+nghost]-v[i+nghost][j+nghost])/dy2 -           1.0*(mmj)*(v[i+nghost][j+nghost]-v[i+nghost][j-1+nghost])/dy2);
+						           //+(mhu+mpi+mpimj+mmj)/4.0*(u[i+nghost+1][j+nghost]-u[i+nghost+1][j+nghost-1])/(dx*dy)
+							       //-(mhu+mmi+mmimj+mmj)/4.0*(u[i+nghost][j+nghost]-u[i+nghost][j+nghost-1] )/(dy*dx) );
 			}
 		}	
 	}
+	/*
 	#pragma omp parallel for
-	for(int i = 0;i<nx+1;i++){
-		vs[i][0] = v[i][0];	
-		vs[i][ny-1] = v[i][ny-1];
+	for(int i = 0;i<nx+1;i++){//lower and upper
+		vs[i+nghost][0+nghost] = v[i+nghost][0+nghost];
+		vs[i+nghost][ny-1+nghost] = v[i+nghost][ny-1+nghost];
 		if(i!=nx){
-			us[i][0] = u[i][0];
-			us[i][ny] = u[i][ny];
+			us[i+nghost][nghost-1] = u[i+nghost][nghost-1];
+			us[i+nghost][ny+nghost-1] = u[i+nghost][ny+nghost-1];
 		}
 	}
 	#pragma omp parallel for
-	for(int j=0;j<ny+1;j++){
-		us[0][j] = u[0][j];
-		us[nx-1][j] = u[nx-1][j];
+	for(int j=0;j<ny+1;j++){//left and right
+		us[0+nghost][j+nghost] = u[0+nghost][j+nghost];
+		us[nx-1+nghost][j+nghost] = u[nx-1+nghost][j+nghost];
 		if(j!=ny){
-			vs[0][j] = v[0][j];
-			vs[nx][j] = v[nx][j];
+			vs[0+nghost-1][j+nghost] = v[0+nghost-1][j+nghost];
+			vs[nx+nghost-1][j+nghost] = v[nx+nghost-1][j+nghost];
 		}
-	}
+	}*/
+	set_bcs(us, vs, dx, dy, nx, ny,nghost, st);
 }
 
 
 /* Poisson Solver */
-void slv_pssn(double** restrict phi,double** restrict phinext, double** restrict us, double** restrict vs, double dx, double dy, int nx, int ny,double dt,double min)
+void slv_pssn(double** restrict phi,double** restrict phinext, double** restrict a, double** restrict us, double** restrict vs, double dx, double dy, int nx, int ny,int nghost, double dt,double min, struct slv_settings st)
 {
 	double dx2 = pow(dx,2.0);
 	double dy2 = pow(dy,2.0);
 	double save = 0.00;
 	double resid = 100.0;
 	int cnt = 0;
-	while(resid>min){
+	while( resid > min && cnt < nx*ny*10){
 		cnt = cnt+1;
+		//printf("count %i \n",cnt);
 		#pragma omp parallel for
-		for(int i = 0;i<nx+1;i++){
-			phi[i][0] = phi[i][1];
-			phi[i][ny] = phi[i][ny-1];
+		for(int i = 0;i<nx;i++){
+			phi[i+nghost][nghost-1] = phi[i+nghost][nghost]; //lower wall
+			phi[i+nghost][ny+nghost-1] = phi[i+nghost][ny-2+nghost]; //upper wall
 		}
 		#pragma omp parallel for 
-		for(int j = 0;j<ny+1;j++){
-			phi[0][j] = phi[1][j];
-			phi[nx][j] = phi[nx-1][j];
+		for(int j = 0;j<ny;j++){
+			phi[nghost-1][j+nghost] = phi[nghost][j+nghost];
+			phi[nx+nghost-1][j+nghost] = phi[nx-2+nghost][j+nghost];
 		}
+		phinext[nghost][nghost-1] = 0.0;
+		phi[nghost][nghost-1] = 0.0;
+
+		//set_all_bcs_neumann(phi,dx,dy,nx,ny,nghost,nghost);
 		#pragma omp parallel for
-		for(int i = 1; i<nx;i++){
-			for(int j = 1; j<ny; j++){
-				phinext[i][j] = 1.0/(2.0/dx2+2.0/dy2)*((phi[i+1][j]+phi[i-1][j])/dx2+(phi[i][j+1]+phi[i][j-1])/dy2)-1.0/(dt*(2.0/dx2+2.0/dy2))*((us[i][j]-us[i-1][j])/dx+(vs[i][j]-vs[i][j-1])/dy);
+		for(int i = 0; i<nx-1;i++){
+			for(int j = 0; j<ny-1; j++){
+				//if(i == 0 && j == 0){ j = j+1;}
+				//else {
+					double rpj, rmj, rpi, rmi, rho;
+					rho = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+					rpj = a[i+nghost][j+nghost+1]*st.rhol+(1.0-a[i+nghost][j+nghost+1])*st.rhog;
+					rmj = a[i+nghost][j+nghost-1]*st.rhol+(1.0-a[i+nghost][j+nghost-1])*st.rhog;
+					rpi = a[i+nghost+1][j+nghost]*st.rhol+(1.0-a[i+nghost+1][j+nghost])*st.rhog;
+					rmi = a[i+nghost-1][j+nghost]*st.rhol+(1.0-a[i+nghost-1][j+nghost])*st.rhog;
+					double rpj2,rmj2,rpi2,rmi2;
+					rpj2 = (rpj+rho)/2.0;
+					rmj2 = (rmj+rho)/2.0;
+					rpi2 = (rpi+rho)/2.0;
+					rmi2 = (rmi+rho)/2.0;
+					//phinext[i][j] = 1.0/rho*1.0/(2.0/dx2+2.0/dy2)*
+					//		((rpi*phi[i+1][j]+rmi*phi[i-1][j])/dx2+(rpj*phi[i][j+1]+rmj*phi[i][j-1])/dy2)
+					//		-1.0/(dt*(2.0/dx2+2.0/dy2))*((rho*us[i][j]-rmi*us[i-1][j])/dx+(rho*vs[i][j]-rmj*vs[i][j-1])/dy);
+					phinext[i+nghost][j+nghost] = 1.0/((-1.0/(rpj2*dy2)-1.0/(rmj2*dy2)-1.0/(rpi2*dx2)-1.0/(rmi2*dx2)))*
+							( (us[i+nghost+1][j+nghost]-us[i+nghost][j+nghost])/(dt*dx) + (vs[i+nghost][j+nghost+1]-vs[i+nghost][j+nghost])/(dt*dy)
+									-(1.0/(rpi2*dx2)*phi[i+1+nghost][j+nghost] + 1.0/(rmi2*dx2)*phinext[i-1+nghost][j+nghost]
+									 +1.0/(rpj2*dy2)*phi[i+nghost][j+1+nghost] + 1.0/(rmj2*dy2)*phinext[i+nghost][j-1+nghost]) );
+				//}
 			}
 		}
+
 		#pragma omp parallel for
-		for(int i = 0;i<nx+1;i++){
-			phinext[i][0] = phinext[i][1];
-			phinext[i][ny] = phinext[i][ny-1];
+		for(int i = 0;i<nx;i++){
+			phinext[i+nghost][nghost-1] = phinext[i+nghost][nghost];
+			phinext[i+nghost][ny+nghost-1] = phinext[i+nghost][ny-2+nghost];
 		}
 		#pragma omp parallel for 
-		for(int j = 0;j<ny+1;j++){
-			phinext[0][j] = phinext[1][j];
-			phinext[nx][j] = phinext[nx-1][j];
+		for(int j = 0;j<ny;j++){
+			phinext[nghost-1][j+nghost] = phinext[nghost][j+nghost];
+			phinext[nx+nghost-1][j+nghost] = phinext[nx-2+nghost][j+nghost];
 		}
+		phinext[nghost-1][nghost] = 0.0;
+		phi[nghost-1][nghost] = 0.0;
+
+		//set_all_bcs_neumann(phinext,dx,dy,nx-1,ny-1,nghost,nghost);
 		#pragma omp parallel for //Solve system
-		for(int i = 1; i<nx;i++){
-				for(int j = 1; j<ny; j++){
-					phi[i][j] = 1.0/(2.0/dx2+2.0/dy2)*((phinext[i+1][j]+phinext[i-1][j])/dx2+(phinext[i][j+1]+phinext[i][j-1])/dy2)-1.0/(dt*(2.0/dx2+2.0/dy2))*((us[i][j]-us[i-1][j])/dx+(vs[i][j]-vs[i][j-1])/dy);
-				}
+		for(int i = 0; i<nx-1;i++){
+					for(int j = 0; j<ny-1; j++){
+					//if(i == 0 && j == 0){ j = j+1;}
+					//else {
+						double rpj, rmj, rpi, rmi, rho;
+						rho = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+						rpj = a[i+nghost][j+nghost+1]*st.rhol+(1.0-a[i+nghost][j+nghost+1])*st.rhog;
+						rmj = a[i+nghost][j+nghost-1]*st.rhol+(1.0-a[i+nghost][j+nghost-1])*st.rhog;
+						rpi = a[i+nghost+1][j+nghost]*st.rhol+(1.0-a[i+nghost+1][j+nghost])*st.rhog;
+						rmi = a[i+nghost-1][j+nghost]*st.rhol+(1.0-a[i+nghost-1][j+nghost])*st.rhog;
+						double rpj2,rmj2,rpi2,rmi2;
+						rpj2 = (rpj+rho)/2.0;
+						rmj2 = (rmj+rho)/2.0;
+						rpi2 = (rpi+rho)/2.0;
+						rmi2 = (rmi+rho)/2.0;
+						/*if(i == 40-nghost && j == 32-nghost){
+							double e1 = a[i+nghost][j+nghost-1];
+							double e2 = st.rhol;
+							double e3 = (1.0-a[i+nghost][j+nghost]);
+							double e4 = st.rhog;
+							double dsxd = 2.0;
+
+						}*/
+						//phi[i][j] = 1.0/(rho)*1.0/(2.0/dx2+2.0/dy2)*((rpi*phinext[i+1][j]+rmi*phinext[i-1][j])/dx2+(rpj*phinext[i][j+1]+rmj*phinext[i][j-1])/dy2)
+						//		-1.0/(dt*(2.0/dx2+2.0/dy2))*((rho*us[i][j]-rmi*us[i-1][j])/dx+(rho*vs[i][j]-rmj*vs[i][j-1])/dy);
+						phi[i+nghost][j+nghost] = 1.0/((-1.0/(rpj2*dy2)-1.0/(rmj2*dy2)-1.0/(rpi2*dx2)-1.0/(rmi2*dx2)))*
+												( (us[i+nghost+1][j+nghost]-us[i+nghost][j+nghost])/(dt*dx) + (vs[i+nghost][j+nghost+1]-vs[i+nghost][j+nghost])/(dt*dy)
+														-(1.0/(rpi2*dx2)*phinext[i+1+nghost][j+nghost] + 1.0/(rmi2*dx2)*phi[i-1+nghost][j+nghost]
+														 +1.0/(rpj2*dy2)*phinext[i+nghost][j+1+nghost] + 1.0/(rmj2*dy2)*phi[i+nghost][j-1+nghost]) );
+						//printf("%i,%i\n",i,j);
+				//}
+			}
 		}
+
 		resid = 0.0;
-		for(int i=0; i<nx; i++){
-			for(int j=0;j<ny;j++){
-				save = fabs(phi[i][j]-phinext[i][j]); //Infinity Norm
+		for(int i=0; i<nx-1; i++){
+			for(int j=0;j<ny-1;j++){
+				double rpj, rmj, rpi, rmi, rho;
+				rho = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+				rpj = a[i+nghost][j+nghost+1]*st.rhol+(1.0-a[i+nghost][j+nghost+1])*st.rhog;
+				rmj = a[i+nghost][j+nghost-1]*st.rhol+(1.0-a[i+nghost][j+nghost-1])*st.rhog;
+				rpi = a[i+nghost+1][j+nghost]*st.rhol+(1.0-a[i+nghost+1][j+nghost])*st.rhog;
+				rmi = a[i+nghost-1][j+nghost]*st.rhol+(1.0-a[i+nghost-1][j+nghost])*st.rhog;
+				double rpj2,rmj2,rpi2,rmi2;
+				rpj2 = (rpj+rho)/2.0;
+				rmj2 = (rmj+rho)/2.0;
+				rpi2 = (rpi+rho)/2.0;
+				rmi2 = (rmi+rho)/2.0;
+				save = fabs(phi[i+nghost][j+nghost]-1.0/((-1.0/(rpj2*dy2)-1.0/(rmj2*dy2)-1.0/(rpi2*dx2)-1.0/(rmi2*dx2)))*
+						( (us[i+nghost+1][j+nghost]-us[i+nghost][j+nghost])/(dt*dx) + (vs[i+nghost][j+nghost+1]-vs[i+nghost][j+nghost])/(dt*dy)
+								-(1.0/(rpi2*dx2)*phi[i+1+nghost][j+nghost] + 1.0/(rmi2*dx2)*phi[i-1+nghost][j+nghost]
+								 +1.0/(rpj2*dy2)*phi[i+nghost][j+1+nghost] + 1.0/(rmj2*dy2)*phi[i+nghost][j-1+nghost]) )); //Infinity Norm
 				if (save>resid){
 					resid = save;
 				} 	
 			}
 		}
 	}
+	printf("count %i \n",cnt);
 #ifdef DEBUG
 	printf("\t\t Poisson Iterations: %i\n",cnt);
 #endif
 }
-
+int get_pssn_ind(int i, int j, int nx, int ny){
+	int ind;
+	ind = j*(nx-1)+i;
+	return ind;
+}
+int get_pssn_i(int ind, int nx, int ny){
+	int i = ind%(nx-1);
+	return i;
+}
+int get_pssn_j(int ind, int nx, int ny){
+	int i = get_pssn_i(ind, nx, ny);
+	int j = (ind-i)/(nx-1);
+	return j;
+}
 /* Poisson Solver */
-void slv_pssn_gmres(double** restrict phi,double** restrict phinext, double** restrict us, double** restrict vs, double dx, double dy, int nx, int ny,double dt,double min, struct slv_settings st)
+void slv_pssn_gmres(double** restrict phi,double* restrict x, double** restrict a, double** restrict us, double** restrict vs, double dx, double dy, int nx, int ny, int nghost, double dt,double min, struct slv_settings st)
 {
 #ifdef DEBUG
 	printf("\n Mgmres poisson call \n");
@@ -982,86 +1340,176 @@ void slv_pssn_gmres(double** restrict phi,double** restrict phinext, double** re
 	double dy2 = pow(dy,2.0);
 	int ic = 0;
 	int jc = 0;
-	int n = (nx+1)*(ny+1); //Rank of Linear System
-	int nz_num = (2*nx+2*ny) + nx*ny*5; //the number of nonzero matrix values.
+	int n = (nx-1)*(ny-1); //Rank of Linear System
+	int nz_num = (5*n)-2*(ny-1)-2*(nx-1); //the number of nonzero matrix values. 5 per entry minus out of bounds left/right top/bottom
+
 	double* A = malloc(nz_num*sizeof(double)); //Matrix Values
 	int* iA = malloc(nz_num*sizeof(int)); //Matrix Row Index
+	int* iAcr = malloc((n+1)*sizeof(int)); // Matrix Row Index - Compressed Row;
 	int* jA = malloc(nz_num*sizeof(int)); //Matrix Column Index
-	double* x = malloc(n*sizeof(double)); //An approximation to the solution.  On output, an improved approximation.
+
+	//double* x = malloc(n*sizeof(double)); //An approximation to the solution.  On output, an improved approximation.
     double* rhs = malloc(n*sizeof(double)); //The right hand side of the linear system.
-    int itr_max = 5; //The maximum number of (outer) iterations to take.
-    int mr = 5; //the maximum number of (inner) iterations to take.
-    double tol_abs = 0.001; //An absolute tolerance applied to the current residual.
-    double tol_rel = 0.001; //A relative tolerance comparing the current residual to the initial residual.
-	int cnt = 0;
-	int cntrhs =0;
-	//Ground lower corner
-	A[cnt] = 1.0l; iA[cnt] = 0; jA[cnt] = 0; cnt++;
-	rhs[cntrhs] = 0.0;cntrhs++;
-	int i = 0;
-	int j = 0;
-	for (j = 0; j < ny+1 ; j++){ //Bottom Wall
-		if (st.YBC == PERIODIC){
-			A[cnt] =  1.0l; iA[cnt] = i*(ny+1)+j; jA[cnt] = i*(ny+1)+j;    cnt++;//This value...
-			A[cnt] = -1.0l; iA[cnt] = i*(ny+1)+j; jA[cnt] = (nx)*(ny+1)+j; cnt++;//and its periodic neighbor...
-			rhs[cntrhs] = 0.0; cntrhs++;                                         //are equal
-		} else {
-			A[cnt] = 1.0; iA[cnt] = i*(ny+1)+j; jA[cnt] = i*(ny+1)+j; cnt++; //This value...
-			A[cnt] = 1.0; iA[cnt] = i*(ny+1)+j; jA[cnt] = (i+1)*(ny+1)+j; cnt++;   //and its inside neighbor...
-			rhs[cntrhs] = 0.00; cntrhs++;                                    //are equal
-		}
-	}
-	i = 0;
-	j = 0;
-	for (i = 0; i < nx+1 ; i++){//Left Wall
-		if (st.XBC == PERIODIC){
-			A[cnt] =  1.0l; iA[cnt] = i*(ny+1)+j; jA[cnt] = i*(ny+1)+j;  cnt++;//This value...
-			A[cnt] = -1.0l; iA[cnt] = i*(ny+1)+j; jA[cnt] = i*(ny+1)+ny; cnt++;//and its periodic neighbor...
-			rhs[cntrhs] = 0.0; cntrhs++;                                       //are equal
-		} else {
-			A[cnt] = 1.0; iA[cnt] = i*(ny+1)+j; jA[cnt] = i*(ny+1)+j;   cnt++; //This value...
-			A[cnt] = 1.0; iA[cnt] = i*(ny+1)+j; jA[cnt] = i*(ny+1)+j+1; cnt++; //and its inside neighbor...
-			rhs[cntrhs] = 0.00; cntrhs++;                                      //are equal
-		}
-	}
-#ifdef DEBUG
-	printf("\n Equations from BCs - %i", cntrhs);
-#endif
-	double cnst = -1.0/(2.0/dx2+2.0/dy2);
-	for (i = 1; i<nx; i++){//Inside Points
-		for (j =1; j<ny; j++){
-			A[cnt] =  1.0l; iA[cnt] = (i)*(ny+1)+j; jA[cnt] = i*(ny+1)+(j);  cnt++;  //This value...
-			A[cnt] = cnst/dy2; iA[cnt] = (i)*(ny+1)+j; jA[cnt] = i*(ny+1)+(j+1); cnt++; //Point +j...
-			A[cnt] = cnst/dy2; iA[cnt] = (i)*(ny+1)+j; jA[cnt] = i*(ny+1)+(j-1); cnt++; //Point -j...
-			A[cnt] = cnst/dx2; iA[cnt] = (i)*(ny+1)+j; jA[cnt] = (i+1)*(ny+1)+(j); cnt++; //Point +i...
-			A[cnt] = cnst/dx2; iA[cnt] = (i)*(ny+1)+j; jA[cnt] = (i-1)*(ny+1)+(j-1); cnt++; //Point -i...
-			rhs[cntrhs] = -cnst/dt*(((us[i][j]-us[i-1][j])/dx+(vs[i][j]-vs[i][j-1])/dy)); cntrhs++; //Equal to ustar and vstar forcing
-		}
-	}
-	//mgmres_st (int n, int nz_num, int ia[], int ja[], double a[], double x[], double rhs[], int itr_max, int mr, double tol_abs, double tol_rel )
-#ifdef DEBUG
-	printf("\n Calling mgmres \n");
-	printf("\n Predicted %i rank - counted %i", n, cntrhs);
-	printf("\n Predicted %i A entries - counted %i \n", nz_num, cnt);
-#endif
+    int itr_max = 10; //The maximum number of (outer) iterations to take.
+
+    int mr = n/5; //the maximum number of (inner) iterations to take.
+    double tol_abs = 0.0000000000001; //An absolute tolerance applied to the current residual.
+
+    double tol_rel = 1.0; //A relative tolerance comparing the current residual to the initial residual.
 #ifdef DBGMGM
-	for (int i = 0; i<n; i++){
-		printf("\t|");
-		for (int j = 0; j < n; j++){
-			printf("%+2.1f, ",find_in_A(A,iA,jA,cnt,i,j));
-		}
-		printf("| = |%+5.3f| \n", rhs[i]);
-	}
+	printf("\n Finished MGMRES Malloc");
 #endif
-	mgmres_st (n, nz_num, iA, jA, A, x, rhs, itr_max, mr, tol_abs,tol_rel);
-#ifdef DEBUG
+    int count = 0;
+    for (int j = 0; j<ny-1; j++){
+    	for(int i = 0; i<nx-1; i++){
+    		double rpj, rmj, rpi, rmi, rho;
+			rho = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+			rpj = a[i+nghost][j+nghost+1]*st.rhol+(1.0-a[i+nghost][j+nghost+1])*st.rhog;
+			rmj = a[i+nghost][j+nghost-1]*st.rhol+(1.0-a[i+nghost][j+nghost-1])*st.rhog;
+			rpi = a[i+nghost+1][j+nghost]*st.rhol+(1.0-a[i+nghost+1][j+nghost])*st.rhog;
+			rmi = a[i+nghost-1][j+nghost]*st.rhol+(1.0-a[i+nghost-1][j+nghost])*st.rhog;
+			double rpj2,rmj2,rpi2,rmi2;
+			rpj2 = (rpj+rho)/2.0;
+			rmj2 = (rmj+rho)/2.0;
+			rpi2 = (rpi+rho)/2.0;
+			rmi2 = (rmi+rho)/2.0;
+			int indpi, indmi, indpj, indmj, ind;
+			int cpi, cmi, cpj, cmj,ch;
+			ind = get_pssn_ind(i,j,nx,ny);
+			//printf("\n Count(%i,%i) =  %i, cmax = %i",i,j,count, nz_num);
+			ch = count; count++;
+			if(i > 0){
+				indmi = get_pssn_ind(i-1,j,nx,ny);
+				cmi = count; count++;
+			} else {
+				indmi = get_pssn_ind(i+1,j,nx,ny);
+				cmi = count; rmi2 = rpi2;
+			}
+			if(i < nx-2){
+				indpi = get_pssn_ind(i+1,j,nx,ny);
+				cpi = count;count++;
+			} else {
+				indpi = get_pssn_ind(i-1,j,nx,ny);
+				count--;
+				cpi = count; count++; rpi2 = rmi2;
+			}
+			if(j > 0){
+				indmj = get_pssn_ind(i,j-1,nx,ny);
+				cmj = count; count++;
+			} else {
+				indmj = get_pssn_ind(i,j+1,nx,ny);
+				cmj = count; rmj2 = rpj2;
+			}
+			if(j < ny-2){
+				indpj = get_pssn_ind(i,j+1,nx,ny);
+				cpj = count; count++;
+			} else {
+				indpj = get_pssn_ind(i,j-1,nx,ny);
+				count--;
+				cpj = count; count++; rpj2 = rmj2;
+			}
+			A[ch] = 0.0; A[cmi] = 0.0; A[cpi] = 0.0; A[cmj] = 0.0; A[cpj] = 0.0;
+			iAcr[ind] = ch; iAcr[ind+1] = ch+3;
+			if(ch == 0){
+				A[ch] = 1.0; iA[ch] = ind; jA[ch] = ind;
+				rhs[ind] = 0.0;
+			} else {
+				A[ch] = ( -1.0/(rpj2*dy2) -1.0/(rmj2*dy2) -1.0/(rpi2*dx2) -1.0/(rmi2*dx2) ); iA[ch] = ind; jA[ch] = ind;
+				rhs[ind] = ( (us[i+nghost+1][j+nghost]-us[i+nghost][j+nghost]) / (dt*dx) + (vs[i+nghost][j+nghost+1]-vs[i+nghost][j+nghost])/(dt*dy) );
+			}
+
+				A[cpi] += (1.0/(rpi2*dx2));iA[cpi] = ind; jA[cpi] = indpi;
+				A[cmi] += (1.0/(rmi2*dx2));iA[cmi] = ind; jA[cmi] = indmi;
+				A[cpj] += (1.0/(rpj2*dy2));iA[cpj] = ind; jA[cpj] = indpj;
+				A[cmj] += (1.0/(rmj2*dy2));iA[cmj] = ind; jA[cmj] = indmj;
+
+			/*phi[i+nghost][j+nghost] = 1.0/((-1.0/(rpj2*dy2)-1.0/(rmj2*dy2)-1.0/(rpi2*dx2)-1.0/(rmi2*dx2)))*
+															( (us[i+nghost+1][j+nghost]-us[i+nghost][j+nghost])/(dt*dx) + (vs[i+nghost][j+nghost+1]-vs[i+nghost][j+nghost])/(dt*dy)
+																	-(1.0/(rpi2*dx2)*phinext[i+1+nghost][j+nghost] + 1.0/(rmi2*dx2)*phi[i-1+nghost][j+nghost]
+																	 +1.0/(rpj2*dy2)*phinext[i+nghost][j+1+nghost] + 1.0/(rmj2*dy2)*phi[i+nghost][j-1+nghost]) );*/
+    	}
+    }
+
+#ifdef DBGMGM
+	printf("\n Equations from BCs - %i", count);
+#endif
+	//mgmres_st (int n, int nz_num, int ia[], int ja[], double a[], double x[], double rhs[], int itr_max, int mr, double tol_abs, double tol_rel )
+#ifdef DBGMGM
+	printf("\n Calling mgmres \n");
+
+#endif
+
+	//mgmres_st (n, nz_num, iA, jA, A, x, rhs, itr_max, mr, tol_abs,tol_rel);
+	pmgmres_ilu_cr (n,nz_num,iAcr,jA,A,x,rhs,itr_max,mr,tol_abs,tol_rel);
+#ifdef DBGMGM
 	printf("\n Returned from mgmres call \n");
 #endif
+	//#pragma omp parallel for
+	 for (int i = 0; i<nx-1; i++){
+	    	for(int j = 0; j<ny-1; j++){
+	    		int ind = get_pssn_ind(i,j,nx,ny);
+	    		phi[i+nghost][j+nghost] = x[ind];
+	    	}
+	 }
+
+		for(int i = 0;i<nx;i++){
+			phi[i+nghost][nghost-1] = phi[i+nghost][nghost+1]; //lower wall
+			phi[i+nghost][ny+nghost-1] = phi[i+nghost][ny-3+nghost]; //upper wall
+		}
+
+		for(int j = 0;j<ny;j++){
+			phi[nghost-1][j+nghost] = phi[nghost+1][j+nghost];
+			phi[nx+nghost-1][j+nghost] = phi[nx-3+nghost][j+nghost];
+		}
+#ifdef DBGMGM
+	printf("\n Values assigned to phi \n A=\n[");
+	for(int i = 0; i<n; i++){
+		printf("\n");
+		for(int j = 0; j<n; j++){
+			printf("%+05.3f, ",find_in_A (A,iA,jA,nz_num,i,j));
+		}
+		printf(";");
+	}
+	printf("]\n[");
+	for(int i = 0; i<n; i++){
+		printf("%+05.3f; ",rhs[i]);
+	}
+	printf("]\n[");
+	for(int i = 0; i<n; i++){
+		printf("%+05.3f; ",x[i]);
+	}
+#endif
+	double save;
+	double resid = 0.0;
+	for(int i=1; i<nx-2; i++){
+		for(int j=1;j<ny-2;j++){
+			double rpj, rmj, rpi, rmi, rho;
+			rho = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+			rpj = a[i+nghost][j+nghost+1]*st.rhol+(1.0-a[i+nghost][j+nghost+1])*st.rhog;
+			rmj = a[i+nghost][j+nghost-1]*st.rhol+(1.0-a[i+nghost][j+nghost-1])*st.rhog;
+			rpi = a[i+nghost+1][j+nghost]*st.rhol+(1.0-a[i+nghost+1][j+nghost])*st.rhog;
+			rmi = a[i+nghost-1][j+nghost]*st.rhol+(1.0-a[i+nghost-1][j+nghost])*st.rhog;
+			double rpj2,rmj2,rpi2,rmi2;
+			rpj2 = (rpj+rho)/2.0;
+			rmj2 = (rmj+rho)/2.0;
+			rpi2 = (rpi+rho)/2.0;
+			rmi2 = (rmi+rho)/2.0;
+			save = fabs( phi[i+nghost][j+nghost]*((-1.0/(rpj2*dy2)-1.0/(rmj2*dy2)-1.0/(rpi2*dx2)-1.0/(rmi2*dx2)))-
+					( (us[i+nghost+1][j+nghost] - us[i+nghost][j+nghost] )/(dt*dx) + (vs[i+nghost][j+nghost+1]-vs[i+nghost][j+nghost])/(dt*dy)
+							-(1.0/(rpi2*dx2)*phi[i+1+nghost][j+nghost] + 1.0/(rmi2*dx2)*phi[i-1+nghost][j+nghost]
+							 +1.0/(rpj2*dy2)*phi[i+nghost][j+1+nghost] + 1.0/(rmj2*dy2)*phi[i+nghost][j-1+nghost]) ) ); //Infinity Norm
+			if (save>resid){
+				resid = save;
+			}
+		}
+	}
+	printf("resid = %E \n",resid);
 
 	free(A);
 	free(iA);
+	free(iAcr);
 	free(jA);
-	free(x);
+	//free(x);
 	free(rhs);
 }
 double find_in_A (double* A, int* iA, int* jA, int npt, int i, int j){
@@ -1072,19 +1520,29 @@ double find_in_A (double* A, int* iA, int* jA, int npt, int i, int j){
 	}
 	return 0.0l;
 }
-void apply_projection(double** restrict phi, double** restrict u, double** restrict us, double** restrict v, double** restrict vs, double dx, double dy, int nx, int ny, double dt)
+double apply_projection(double** restrict phi, double** restrict a, double** restrict u, double** restrict us, double** restrict v, double** restrict vs, double dx, double dy, int nx, int ny, int nghost, double dt,struct slv_settings st)
 {
-	#pragma omp parallel for
-	for(int i=1;i<nx;i++){
-		for(int j=1;j<ny;j++){
-			if(i!=nx-1){
-				u[i][j] = us[i][j]-dt*(phi[i+1][j]-phi[i][j])/dx;
+	double maxv = 0.0;
+	for(int i=0;i<nx-1;i++){
+		for(int j=0;j<ny-1;j++){
+			double rhoi = a[i+nghost-1][j+nghost]*st.rhol+(1.0-a[i+nghost-1][j+nghost])*st.rhog;
+			double rpi = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+			double rhoj = a[i+nghost][j+nghost-1]*st.rhol+(1.0-a[i+nghost][j+nghost-1])*st.rhog;
+			double rpj = a[i+nghost][j+nghost]*st.rhol+(1.0-a[i+nghost][j+nghost])*st.rhog;
+			if(i!=0){
+				u[i+nghost][j+nghost] = us[i+nghost][j+nghost]-dt*(2.0)/(rhoi+rpi)*(phi[i+nghost][j+nghost]-phi[i+nghost-1][j+nghost])/dx;
 			}
-			if(j!=ny-1){
-				v[i][j] = vs[i][j]-dt*(phi[i][j+1]-phi[i][j])/dy;
+			if(j!=0){
+				v[i+nghost][j+nghost] = vs[i+nghost][j+nghost]-dt*(2.0)/(rhoj+rpj)*(phi[i+nghost][j+nghost]-phi[i+nghost][j+nghost-1])/dy;
+
+			}
+			if( fmax(fabs(u[i+nghost][j+nghost]),fabs(v[i+nghost][j+nghost])) > maxv){
+				maxv = fmax(fabs(u[i+nghost][j+nghost]),fabs(v[i+nghost][j+nghost]));
+
 			}
 		}
 	}	
+	return maxv;
 }
 
 /* Get weight for WENO5 term */
@@ -1114,6 +1572,8 @@ struct slv_settings init_settings(){
 	st.ny = 40;
 	st.nt = 1000;
 	st.Re = 100.0;
+	st.g = -9.81;
+	st.g = -1000.0;
 	st.dt = 0.001;
 	st.XBC = WALL;
 	st.YBC = WALL;
@@ -1121,6 +1581,12 @@ struct slv_settings init_settings(){
 	st.XLV = 0.0l;
 	st.YLV = 0.0l;
 	st.YRV = 0.0l;
+	st.rhog = 1.0;
+	st.rhol = 1.0;
+	st.mug  = 1.0/100.0;
+	st.mul  = 1.0/100.0;
+	st.Reg = st.rhog/st.mug;
+	st.Rel = st.rhol/st.mul;
 	return st;
 }
 	

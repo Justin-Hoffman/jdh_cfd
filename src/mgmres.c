@@ -906,10 +906,10 @@ void mgmres_st ( int n, int nz_num, int ia[], int ja[], double a[],
   double rho_tol;
   double *s;
   double **v;
-#ifdef DEBUG
+#ifdef DBGMGM
   int verbose = 1;
 #else
-  int verbose = 0;
+  int verbose = 1;
 #endif
   double *y;
 
@@ -1041,7 +1041,7 @@ void mgmres_st ( int n, int nz_num, int ia[], int ja[], double a[],
 
       itr_used = itr_used + 1;
 
-      if ( verbose )
+      if ( verbose && k%100 == 0)
       {
         printf ( "  K =   %8d  Residual = %e\n", k, rho );
       }
@@ -1299,7 +1299,7 @@ void pmgmres_ilu_cr ( int n, int nz_num, int ia[], int ja[], double a[],
 
   ilu_cr ( n, nz_num, ia, ja, a, ua, l );
 
-  if ( verbose )
+  if ( verbose && 0 )
   {
     printf ( "\n" );
     printf ( "PMGMRES_ILU_CR\n" );
@@ -1319,7 +1319,7 @@ void pmgmres_ilu_cr ( int n, int nz_num, int ia[], int ja[], double a[],
 
     rho = sqrt ( r8vec_dot ( n, r, r ) );
 
-    if ( verbose )
+    if ( verbose  && 0)
     {
       printf ( "  ITR = %d  Residual = %e\n", itr, rho );
     }
@@ -1417,7 +1417,7 @@ void pmgmres_ilu_cr ( int n, int nz_num, int ia[], int ja[], double a[],
 
       itr_used = itr_used + 1;
 
-      if ( verbose )
+      if ( verbose && k%100 == 0 && 0)
       {
         printf ( "  K   = %d  Residual = %e\n", k, rho );
       }
@@ -1456,8 +1456,8 @@ void pmgmres_ilu_cr ( int n, int nz_num, int ia[], int ja[], double a[],
 
   if ( verbose )
   {
-    printf ( "\n" );
-    printf ( "PMGMRES_ILU_CR:\n" );
+    //printf ( "\n" );
+    //printf ( "PMGMRES_ILU_CR:\n" );
     printf ( "  Iterations = %d\n", itr_used );
     printf ( "  Final residual = %e\n", rho );
   }
