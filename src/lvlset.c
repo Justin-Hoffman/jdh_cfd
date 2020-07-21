@@ -194,7 +194,7 @@ void init_zalesak(double** G, int nx, int ny, int nghost, double dx, double dy){
 	#pragma omp parallel for
 	for (int i = -nghost; i<nx+nghost-1; i++){
 		for (int j = -nghost; j<ny+nghost-1; j++){
-			G[i+nghost][j+nghost] = dist_from_zalesak((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R, cwidth, cdepth, cangle);
+			G[i+nghost][j+nghost] = dist_from_zalesak((i+nghost)*dx+dx/2.0-nghost*dx,(j+nghost)*dy+dy/2.0-nghost*dy,xc,yc,R, cwidth, cdepth, cangle);
 		}
 	}
 	//printf("\n\n Zalesak Test: D = %f \n\n\n", dist_from_zalesak(0.0, -0.25, 0.0, 0.0, 1.0, .5, 1.5, 3.0/2.0*M_PI) );
@@ -206,7 +206,18 @@ void init_circle(double** G, int nx, int ny, int nghost, double dx, double dy){
 	#pragma omp parallel for
 	for (int i = -nghost; i<nx+nghost-1; i++){
 		for (int j = -nghost; j<ny+nghost-1; j++){
-			G[i+nghost][j+nghost] = dist_from_circ((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R);
+			G[i+nghost][j+nghost] = dist_from_circ((i+nghost)*dx+dx/2.0-nghost*dx,(j+nghost)*dy+dy/2.0-nghost*dy,xc,yc,R);
+		}
+	}
+}
+void init_circ2(double** G, int nx, int ny, int nghost, double dx, double dy){
+	double xc = 4.0;
+	double yc = 4.0;
+	double R = 2.0;
+	#pragma omp parallel for
+	for (int i = -nghost; i<nx+nghost-1; i++){
+		for (int j = -nghost; j<ny+nghost-1; j++){
+			G[i+nghost][j+nghost] = dist_from_circ((i+nghost)*dx+dx/2.0-nghost*dx,(j+nghost)*dy+dy/2.0-nghost*dy,xc,yc,R);
 		}
 	}
 }
@@ -214,23 +225,24 @@ void init_RT(double** G, int nx, int ny, int nghost, double dx, double dy){
 #pragma omp parallel for
 	for (int i = -nghost; i<nx+nghost-1; i++){
 		for (int j = -nghost; j<ny+nghost-1; j++){
-				G[i+nghost][j+nghost] = j*dy+dy/2-2.0-0.05*cos(2*M_PI*(i*dx+dx/2.0));
+				G[i+nghost][j+nghost] = j*dy+dy/2.0-2.0-0.05*cos(2*M_PI*(i*dx+dx/2.0));
 		}
 	}
 }
 void init_drop(double** G, int nx, int ny, int nghost, double dx, double dy){
-		double xc = 0.5;
-		double yc = 0.5;
-		double R = 0.15;
-		double x0 = 1.0;
-		double y0 = .05;
+		double xc = 0.005;
+		double yc = 0.005;
+		double R = 0.0015;
+		double x0 = .01;
+		double y0 = .0005;
 		double x1 = 0.0;
-		double y1 = .05;
+		double y1 = .0005;
 #pragma omp parallel for
 	for (int i = -nghost; i<nx+nghost-1; i++){
 		for (int j = -nghost; j<ny+nghost-1; j++){
 				G[i+nghost][j+nghost] = fmax(dist_from_circ((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R),
 						y1-((j+nghost)*dy+dy/2.0f-nghost*dy) );
+				//G[i+nghost][j+nghost] = dist_from_circ((i+nghost)*dx+dx/2.0f-nghost*dx,(j+nghost)*dy+dy/2.0f-nghost*dy,xc,yc,R);
 		}
 	}
 }

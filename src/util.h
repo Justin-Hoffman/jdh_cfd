@@ -26,6 +26,10 @@ int G_from_flux(int i, int j, double** G, int** Markers,int** MarkPoint, double*
 void get_alpha(double** G, double** alpha,  int nghost, double dx, double dy,int nx, int ny);
 double get_alpha_sum(double** alpha,  int nghost, double dx, double dy,int nx, int ny);
 double get_alpha_diff(double** alpha, double** alpha2,  int nghost, double dx, double dy,int nx, int ny);
+double get_tke(double** alpha, double** u, double** v, int nghost, double dx, double dy,int nx, int ny, struct slv_settings st);
+double get_minp(double** alpha, double** phi, int nghost, double dx, double dy,int nx, int ny, struct slv_settings st);
+double get_maxp(double** alpha, double** phi, int nghost, double dx, double dy,int nx, int ny, struct slv_settings st);
+void get_curv(double** K, double** G, int nx, int ny, int nghost, double dx, double dy, struct slv_settings st);
 V2D vof_alpha_grad(double** alpha, int i, int j, int nghost, double dx, double dy);
 double vof_d_from_alpha(double a, V2D m, double hx, double hy);
 double vof_alpha_from_surf(double d, V2D m, double hx, double hy);

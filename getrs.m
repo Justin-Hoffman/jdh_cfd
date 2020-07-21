@@ -221,7 +221,7 @@ function getrs(nx,ny,nprefix)
     %  hold off;
 
 
-    %! mv ./*.png ~/Documents/ASU/MAE598Interfaces/HW5/
+    !mv ./*.png ~/Documents/ASU/MAE598Interfaces/FinalProject/
     if (max(max(isnan(us))) == 1)
         disp('NaN u')
         disp(sprintf('Min/Max U = %f, %f\n',min(min(us)), max(max(us))));

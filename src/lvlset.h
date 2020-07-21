@@ -36,6 +36,8 @@
 
 	void init_circle(double** G, int nx, int ny, int nghost, double dx, double dy);
 
+	void init_circ2(double** G, int nx, int ny, int nghost, double dx, double dy);
+
 	void init_RT(double** G, int nx, int ny, int nghost, double dx, double dy);
 
 	void init_drop(double** G, int nx, int ny, int nghost, double dx, double dy);

@@ -12,6 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "util.h"
+#include "slv.h"
 #include "lvlset.h"
 
 
@@ -175,6 +176,60 @@ double get_alpha_diff(double** alpha, double** alpha2,  int nghost, double dx, d
 		}
 	}
 	return sum;
+}
+double get_tke(double** alpha, double** u, double** v, int nghost, double dx, double dy,int nx, int ny, struct slv_settings st){
+	double sum = 0.0;
+	for(int i = 0; i<nx-1; i++){
+		for(int j = 0; j<ny-1; j++){
+			double rho, uc, vc, vsq;
+			rho = alpha[i+nghost][j+nghost]*st.rhol+(1.0-alpha[i+nghost][j+nghost])*st.rhog;
+			uc = 0.5*(u[i+nghost][j+nghost]+u[i+nghost+1][j+nghost]);
+			vc = 0.5*(v[i+nghost][j+nghost]+v[i+nghost][j+nghost+1]);
+			vsq = (uc*uc+vc*vc);
+
+			sum+= 0.5*rho*vsq*dx*dy;
+		}
+	}
+	return sum;
+}
+double get_minp(double** alpha, double** phi, int nghost, double dx, double dy,int nx, int ny, struct slv_settings st){
+	double minp = 1000.0;
+	for(int i = 0; i<nx-1; i++){
+		for(int j = 0; j<ny-1; j++){
+			double rho,p;
+			rho = alpha[i+nghost][j+nghost]*st.rhol+(1.0-alpha[i+nghost][j+nghost])*st.rhog;
+			p = phi[i+nghost][j+nghost];
+			minp = fmin(p,minp);
+		}
+	}
+	return minp;
+}
+double get_maxp(double** alpha, double** phi, int nghost, double dx, double dy,int nx, int ny, struct slv_settings st){
+	double maxp = -1000.0;
+	for(int i = 0; i<nx-1; i++){
+		for(int j = 0; j<ny-1; j++){
+			double rho,p;
+			rho = alpha[i+nghost][j+nghost]*st.rhol+(1.0-alpha[i+nghost][j+nghost])*st.rhog;
+			p = phi[i+nghost][j+nghost];
+			maxp = fmax(p,maxp);
+		}
+	}
+	return maxp;
+}
+
+void get_curv(double** K, double** G, int nx, int ny, int nghost, double dx, double dy, struct slv_settings st){
+#pragma omp parallel for
+	for(int i = 0; i<nx-1; i++){
+			for(int j = 0; j<ny-1; j++){
+				double gx, gy, gxx, gyy, gxy;
+				gx = (G[i+nghost+1][j+nghost]-G[i+nghost-1][j+nghost])/(2.0*dx);
+				gy = (G[i+nghost][j+nghost+1]-G[i+nghost][j+nghost-1])/(2.0*dy);
+				gxx = (G[i+nghost+1][j+nghost]-2.0*G[i+nghost][j+nghost]+G[i+nghost-1][j+nghost])/(dx*dx);
+				gyy = (G[i+nghost][j+nghost+1]-2.0*G[i+nghost][j+nghost]+G[i+nghost][j+nghost-1])/(dy*dy);
+				gxy = ( (G[i+nghost+1][j+nghost+1]-G[i+nghost-1][j+nghost+1])/(2.0*dx) - (G[i+nghost+1][j+nghost-1]-G[i+nghost-1][j+nghost-1])/(2.0*dx) )/(2.0*dy);
+				K[i+nghost][j+nghost] = (gxx*gy*gy+gyy*gx*gx-2.0*gx*gy*gxy)/(pow(gx*gx+gy*gy,3.0/2.0));
+			}
+	}
 }
 
 V2D vof_alpha_grad(double** alpha, int i, int j, int nghost, double dx, double dy){

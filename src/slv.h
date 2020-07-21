@@ -31,6 +31,7 @@ typedef enum {WALL,PERIODIC,SLIPWALL} jdh_BC;
 		double mul;
 		double Reg;
 		double Rel;
+		double sigma;
 	};
 
 void solve_matrix(int n, double* a, double* b, double* c, double* v, double* x);
@@ -59,7 +60,7 @@ void get_stream(double** restrict strm, double** restrict strmnext, double** res
 /* Uses AB2 + ADI */
 void slv_vbe(double** restrict a, double** restrict u, double** restrict us, double** restrict dus, double** restrict duss, double** restrict v, double** restrict vs, double** restrict dvs, double** restrict dvss, double** restrict hu, double** restrict huold,double** restrict hv, double** restrict hvold, double dx, double dy, int nx, int ny, int nghost, double dt,struct slv_settings st);
 /* ftcs solver */
-void slv_vbeftcs(double** restrict a, double** restrict u, double** restrict us, double** restrict dus, double** restrict duss, double** restrict v, double** restrict vs, double** restrict dvs, double** restrict dvss, double** restrict hu, double** restrict huold,double** restrict hv, double** restrict hvold, double dx, double dy, int nx, int ny, int nghost,double dt,struct slv_settings st);
+void sslv_vbeftcs(double** restrict a, double** restrict G, double** restrict K, double** restrict u, double** restrict us, double** restrict dus, double** restrict duss, double** restrict v, double** restrict vs, double** restrict dvs, double** restrict dvss, double** restrict hu, double** restrict huold,double** restrict hv, double** restrict hvold, double dx, double dy, int nx, int ny, int nghost, double dt, struct slv_settings st);
 
 /* Poisson Solver */
 void slv_pssn(double** restrict phi,double** restrict phinext,double** restrict a, double** restrict us, double** restrict vs, double dx, double dy, int nx, int ny,int nghost, double dt,double min,struct slv_settings st);
